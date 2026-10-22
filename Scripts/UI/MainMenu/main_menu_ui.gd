@@ -9,7 +9,3 @@ func _ready() -> void:
 
 func initialize(main_menu_logic):
 	buttons.initialize(main_menu_logic)
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass

@@ -7,5 +7,5 @@ extends Node
 func _ready() -> void:
 	pass # Replace with function body.
 
-func initialize(ui):
-	main_menu_state_router.initialize(menu_state, ui)
+func initialize(ui, logic):
+	main_menu_state_router.initialize(menu_state, ui, logic)

@@ -4,16 +4,23 @@ var main_menu_state
 var main_menu_ui
 var ui_panels_node
 
-var game_config_instance = null
-var game_config_panel = preload("res://Scenes/MainMenu/Panels/game_config_panel.tscn")
+var main_scene_logic
+
+var round_config_panel_instance = null
+var round_config_panel = preload("res://Scenes/MainMenu/Panels/round_config_panel.tscn")
+
+var round_config_node_instance = null
+var round_config_node = preload("res://Scenes/round_config.tscn")
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.
 
-func initialize(menu_state, ui):
+func initialize(menu_state, ui, logic):
 	main_menu_state = menu_state
 	main_menu_ui = ui
+	main_scene_logic = logic
 
 	main_menu_state.state_changed.connect(_on_state_changed)
 
@@ -21,27 +28,32 @@ func _on_state_changed(new_state):
 
 	match new_state:
 		main_menu_state.State.INTRO_SCREEN:
-			destroy_game_config_panel()
+			destroy_round_config_panel()
 		main_menu_state.State.SETTINGS:
-			destroy_game_config_panel()
+			destroy_round_config_panel()
 		main_menu_state.State.GAME_SETUP:
-			create_game_config_panel(ui_panels_node)
+			create_round_config_panel(ui_panels_node)
+			create_round_config_node()
 
 
-func create_game_config_panel(ui_panels_node):
-	if game_config_instance != null:
+func create_round_config_panel(ui_panels_node):
+	if round_config_panel_instance != null:
 		return
 
 	if main_menu_ui != null:
 		ui_panels_node = main_menu_ui.panels
 
-	game_config_instance = game_config_panel.instantiate()
-	ui_panels_node.add_child(game_config_instance)
+	round_config_panel_instance = round_config_panel.instantiate()
+	ui_panels_node.add_child(round_config_panel_instance)
 
-
-func destroy_game_config_panel():
-	if game_config_instance == null:
+func create_round_config_node():
+	if round_config_node_instance != null:
 		return
 
-	game_config_instance.queue_free()
-	game_config_instance = null
+
+func destroy_round_config_panel():
+	if round_config_panel_instance == null:
+		return
+
+	round_config_panel_instance.queue_free()
+	round_config_panel_instance = null

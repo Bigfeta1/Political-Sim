@@ -32,7 +32,6 @@ static func find_country_files() -> Dictionary:
 	return files
 
 
-
 func set_value(key, value) -> void:
 	if choices.has(key) and choices[key].has(value):
 		values[key] = value

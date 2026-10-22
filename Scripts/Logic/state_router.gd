@@ -53,7 +53,7 @@ func create_main_menu():
 	main_menu_ui_instance = main_menu_ui.instantiate()
 	ui.add_child(main_menu_ui_instance)
 	
-	main_menu_logic_instance.initialize(main_menu_ui_instance)
+	main_menu_logic_instance.initialize(main_menu_ui_instance, logic)
 	main_menu_ui_instance.initialize(main_menu_logic_instance)	
 
 func destroy_main_menu():
