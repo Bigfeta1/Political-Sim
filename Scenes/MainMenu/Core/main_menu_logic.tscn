@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://j5edrhrdwr6x" path="res://Scripts/Logic/MainMenu/main_menu_logic.gd" id="1_52l62"]
 [ext_resource type="Script" uid="uid://b7dfevi5po72d" path="res://Scripts/Logic/MainMenu/main_menu_state.gd" id="2_hk2ws"]
 [ext_resource type="Script" uid="uid://yc1v7od0wuou" path="res://Scripts/Logic/MainMenu/main_menu_input.gd" id="3_input"]
-[ext_resource type="Script" uid="uid://cgjqctoeowbx" path="res://Scripts/MainMenu/main_menu_state_router.gd" id="3_laaf5"]
+[ext_resource type="Script" uid="uid://cgjqctoeowbx" path="res://Scripts/MainMenu/main_menu_router.gd" id="3_laaf5"]
 
 [node name="MainMenu" type="Node"]
 script = ExtResource("1_52l62")
@@ -14,5 +14,5 @@ script = ExtResource("3_input")
 [node name="MainMenuState" type="Node" parent="."]
 script = ExtResource("2_hk2ws")
 
-[node name="StateRouter" type="Node" parent="."]
+[node name="MainMenuRouter" type="Node" parent="."]
 script = ExtResource("3_laaf5")
