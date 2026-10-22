@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://t3buhnnm2vp5"]
+[gd_scene load_steps=4 format=3 uid="uid://t3buhnnm2vp5"]
 
 [ext_resource type="Script" uid="uid://bxgg3fh2v617e" path="res://Scripts/UI/MainMenu/Panels/RoundConfig/round_config_panel.gd" id="1_g1e1n"]
+[ext_resource type="Script" uid="uid://cbn3xyofkssdf" path="res://Scripts/MainMenu/Panels/begin_button.gd" id="2_g1e1n"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
 font_size = 32
@@ -42,3 +43,19 @@ offset_bottom = 480.0
 [node name="CountryList" type="VBoxContainer" parent="CountryScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="BeginButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -57.0
+offset_top = 31.0
+offset_right = 155.0
+offset_bottom = 57.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "BEGIN"
+script = ExtResource("2_g1e1n")

@@ -2,6 +2,7 @@ extends Node
 
 enum State {
 	MAIN_MENU,
+	CONFIGURE_ROUND,
 	PLAYING_ROUND
 }
 
