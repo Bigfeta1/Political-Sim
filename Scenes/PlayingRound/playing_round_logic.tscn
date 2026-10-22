@@ -1,15 +1,8 @@
-[gd_scene load_steps=11 format=3 uid="uid://ci3di0bw1kl5x"]
+[gd_scene load_steps=4 format=3 uid="uid://ci3di0bw1kl5x"]
 
 [ext_resource type="Script" uid="uid://c773v8pkgpywj" path="res://Scripts/Logic/PlayingRound/playing_round.gd" id="1_spxyj"]
 [ext_resource type="Script" uid="uid://cdkjca860lqqq" path="res://Scripts/Logic/PlayingRound/EventCoordinators/event_coordinators.gd" id="2_q1gt0"]
 [ext_resource type="Script" uid="uid://bennpq8khga5x" path="res://Scripts/Logic/PlayingRound/EventCoordinators/game_initializer.gd" id="3_vpgwi"]
-[ext_resource type="Script" uid="uid://cxgku5xcsdony" path="res://Scripts/Logic/PlayingRound/states.gd" id="4_ds238"]
-[ext_resource type="Script" uid="uid://dqjiejkwonc01" path="res://Scripts/Logic/PlayingRound/turn_manager.gd" id="5_rxv56"]
-[ext_resource type="Script" uid="uid://bq5jcyvmaf3md" path="res://Scripts/Logic/PlayingRound/phase_manager.gd" id="6_251nb"]
-[ext_resource type="Script" uid="uid://doc6impd3nfmk" path="res://Scripts/Country/CountryManager/country_manager.gd" id="7_hh48f"]
-[ext_resource type="Script" uid="uid://biucek5mopf3g" path="res://Scripts/Country/CountryManager/country_manager_logic.gd" id="8_ujlx4"]
-[ext_resource type="Script" uid="uid://cp8i3pn1ydxcy" path="res://Scripts/Country/CountryManager/country_factory.gd" id="9_f0ecm"]
-[ext_resource type="Script" uid="uid://cv4t3216fqoh6" path="res://Scripts/Country/CountryManager/country_list.gd" id="10_vq4bi"]
 
 [node name="PlayingRound" type="Node"]
 script = ExtResource("1_spxyj")
@@ -19,26 +12,3 @@ script = ExtResource("2_q1gt0")
 
 [node name="GameInitializer" type="Node" parent="EventCoordinators"]
 script = ExtResource("3_vpgwi")
-
-[node name="StateManager" type="Node" parent="."]
-script = ExtResource("4_ds238")
-
-[node name="TurnManager" type="Node" parent="StateManager"]
-script = ExtResource("5_rxv56")
-
-[node name="PhaseManager" type="Node" parent="StateManager"]
-script = ExtResource("6_251nb")
-
-[node name="CountryManager" type="Node" parent="."]
-script = ExtResource("7_hh48f")
-
-[node name="Logic" type="Node" parent="CountryManager"]
-script = ExtResource("8_ujlx4")
-
-[node name="CountryFactory" type="Node" parent="CountryManager/Logic"]
-script = ExtResource("9_f0ecm")
-
-[node name="CountryList" type="Node" parent="CountryManager"]
-script = ExtResource("10_vq4bi")
-
-[connection signal="country_created" from="CountryManager/Logic/CountryFactory" to="StateManager/TurnManager" method="add_player"]

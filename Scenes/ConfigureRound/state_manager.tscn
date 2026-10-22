@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" uid="uid://cxgku5xcsdony" path="res://Scripts/Logic/PlayingRound/states.gd" id="1_states"]
+[ext_resource type="Script" uid="uid://dqjiejkwonc01" path="res://Scripts/Logic/PlayingRound/turn_manager.gd" id="2_turn"]
+[ext_resource type="Script" uid="uid://bq5jcyvmaf3md" path="res://Scripts/Logic/PlayingRound/phase_manager.gd" id="3_phase"]
+
+[node name="StateManager" type="Node"]
+script = ExtResource("1_states")
+
+[node name="TurnManager" type="Node" parent="."]
+script = ExtResource("2_turn")
+
+[node name="PhaseManager" type="Node" parent="."]
+script = ExtResource("3_phase")
