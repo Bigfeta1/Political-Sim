@@ -1,9 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://t3buhnnm2vp5"]
+[gd_scene load_steps=3 format=3 uid="uid://t3buhnnm2vp5"]
+
+[ext_resource type="Script" uid="uid://bxgg3fh2v617e" path="res://Scripts/UI/MainMenu/Panels/RoundConfig/round_config_panel.gd" id="1_g1e1n"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
 font_size = 32
 
-[node name="GameConfig" type="PanelContainer"]
+[node name="RoundConfig" type="Panel"]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -15,9 +17,12 @@ offset_right = 400.0
 offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_g1e1n")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 2
+layout_mode = 0
+offset_right = 800.0
+offset_bottom = 500.0
 theme_override_constants/margin_top = 20
 
 [node name="Title" type="Label" parent="MarginContainer"]
@@ -26,3 +31,14 @@ size_flags_vertical = 0
 text = "CHOOSE YOUR COUNTRY"
 label_settings = SubResource("LabelSettings_quu0i")
 horizontal_alignment = 1
+
+[node name="CountryScroll" type="ScrollContainer" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 95.0
+offset_right = 780.0
+offset_bottom = 480.0
+
+[node name="CountryList" type="VBoxContainer" parent="CountryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3

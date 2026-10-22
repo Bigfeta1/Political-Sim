@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3 uid="uid://bcegmipl65uox"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_krmch"]
+font_size = 50
+
+[node name="RoundConfigCountryContainer" type="Panel"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CountryTitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 15.0
+offset_right = 245.0
+offset_bottom = 84.0
+text = "COUNTRY"
+label_settings = SubResource("LabelSettings_krmch")

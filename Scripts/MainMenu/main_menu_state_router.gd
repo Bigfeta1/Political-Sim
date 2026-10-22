@@ -32,8 +32,8 @@ func _on_state_changed(new_state):
 		main_menu_state.State.SETTINGS:
 			destroy_round_config_panel()
 		main_menu_state.State.GAME_SETUP:
-			create_round_config_panel(ui_panels_node)
 			create_round_config_node()
+			create_round_config_panel(ui_panels_node)
 
 
 func create_round_config_panel(ui_panels_node):
@@ -45,10 +45,14 @@ func create_round_config_panel(ui_panels_node):
 
 	round_config_panel_instance = round_config_panel.instantiate()
 	ui_panels_node.add_child(round_config_panel_instance)
+	round_config_panel_instance.initialize(round_config_node_instance)
 
 func create_round_config_node():
 	if round_config_node_instance != null:
 		return
+	
+	round_config_node_instance = round_config_node.instantiate()
+	main_scene_logic.add_child(round_config_node_instance)
 
 
 func destroy_round_config_panel():

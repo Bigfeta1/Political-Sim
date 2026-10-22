@@ -6,7 +6,7 @@ var country_list
 
 const GameConfig = preload("res://Scripts/Logic/game_config.gd")
 
-var countries: Dictionary = {}
+var countries: Array = []
 
 var country_node: PackedScene = preload("res://Scenes/country.tscn")
 
@@ -31,11 +31,9 @@ func configure_country(country, country_name):
 	country_node_data.country_name = country_data["country_name"]
 
 func access_country_data(country_name):
-	var file_path = countries[country_name]
-	var file = FileAccess.open(file_path, FileAccess.READ)
-	var country_data = JSON.parse_string(file.get_as_text())
-	file.close()
-
-	return country_data
+	for file_path in countries:
+		var country_data = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+		if country_data["id"] == country_name:
+			return country_data
 
 #endregion
