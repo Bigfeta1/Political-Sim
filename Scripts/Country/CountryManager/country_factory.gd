@@ -8,7 +8,7 @@ const GameConfig = preload("res://Scripts/Logic/round_config.gd")
 
 var countries: Array = []
 
-var country_node: PackedScene = preload("res://Scenes/country.tscn")
+const COUNTRY_NODE = "res://Scenes/country.tscn"
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -18,7 +18,7 @@ func initialize(emp_list):
 	country_list = emp_list
 
 func create_country(country_name):
-	var new_country = country_node.instantiate()
+	var new_country = SceneLoader.instantiate(COUNTRY_NODE)
 	country_list.add_child(new_country)
 	configure_country(new_country, country_name)
 	country_created.emit(new_country)

@@ -1,23 +1,23 @@
 extends Node
 
 var logic
-var main_menu_logic = preload("res://Scenes/MainMenu/Core/main_menu_logic.tscn")
+const MAIN_MENU_LOGIC = "res://Scenes/MainMenu/Core/main_menu_logic.tscn"
 
 var ui
 var main_menu_ui_instance: Node = null
-var main_menu_ui = preload("res://Scenes/MainMenu/Core/main_menu_ui.tscn")
+const MAIN_MENU_UI = "res://Scenes/MainMenu/Core/main_menu_ui.tscn"
 
 #RoundConfigurator
-var round_configurator = preload("res://Scenes/ConfigureRound/round_configurator_logic.tscn")
+const ROUND_CONFIGURATOR = "res://Scenes/ConfigureRound/round_configurator_logic.tscn"
 
 var round_configurator_ui_instance = null
-var round_configurator_ui = preload("res://Scenes/ConfigureRound/round_configurator_ui.tscn")
+const ROUND_CONFIGURATOR_UI = "res://Scenes/ConfigureRound/round_configurator_ui.tscn"
 
 #PlayingRound
-var playing_round_logic = preload("res://Scenes/PlayingRound/playing_round_logic.tscn")
+const PLAYING_ROUND_LOGIC = "res://Scenes/PlayingRound/playing_round_logic.tscn"
 
 var playing_round_ui_instance = null
-var playing_round_ui = preload("res://Scenes/PlayingRound/playing_round_ui.tscn")
+const PLAYING_ROUND_UI = "res://Scenes/PlayingRound/playing_round_ui.tscn"
 
 var state_manager
 var turn_manager
@@ -46,6 +46,7 @@ func _on_state_changed(new_state):
 		GameState.State.CONFIGURE_ROUND:
 			destroy_main_menu()
 			create_round_configurator()
+			request_playing_round()
 
 		GameState.State.PLAYING_ROUND:
 			destroy_round_configurator()
@@ -56,11 +57,11 @@ func create_main_menu():
 	if logic.get_system("main_menu") != null:
 		return
 
-	var menu = main_menu_logic.instantiate()
+	var menu = SceneLoader.instantiate(MAIN_MENU_LOGIC)
 	logic.add_child(menu)
 	logic.register("main_menu", menu)
 
-	main_menu_ui_instance = main_menu_ui.instantiate()
+	main_menu_ui_instance = SceneLoader.instantiate(MAIN_MENU_UI)
 	ui.add_child(main_menu_ui_instance)
 
 	menu.initialize(main_menu_ui_instance, logic)
@@ -83,11 +84,11 @@ func create_round_configurator():
 	if logic.get_system("round_configurator") != null:
 		return
 
-	var configurator = round_configurator.instantiate()
+	var configurator = SceneLoader.instantiate(ROUND_CONFIGURATOR)
 	logic.add_child(configurator)
 	logic.register("round_configurator", configurator)
 
-	round_configurator_ui_instance = round_configurator_ui.instantiate()
+	round_configurator_ui_instance = SceneLoader.instantiate(ROUND_CONFIGURATOR_UI)
 	ui.add_child(round_configurator_ui_instance)
 	round_configurator_ui_instance.initialize(configurator)
 
@@ -104,11 +105,16 @@ func destroy_round_configurator():
 
 #region PLAYING ROUND
 
+# Loads on a background thread while the round is being configured.
+func request_playing_round():
+	SceneLoader.request(PLAYING_ROUND_LOGIC)
+	SceneLoader.request(PLAYING_ROUND_UI)
+
 func create_playing_round():
 	if logic.get_system("playing_round") != null or playing_round_ui_instance != null:
 		return
 
-	var playing_round = playing_round_logic.instantiate()
+	var playing_round = SceneLoader.instantiate(PLAYING_ROUND_LOGIC)
 	logic.add_child(playing_round)
 	logic.register("playing_round", playing_round)
 	playing_round.initialize(logic.get_system("country_manager"))
@@ -117,7 +123,7 @@ func create_playing_round():
 	turn_manager = state_manager.turn_manager
 	phase_manager = state_manager.phase_manager
 
-	playing_round_ui_instance = playing_round_ui.instantiate()
+	playing_round_ui_instance = SceneLoader.instantiate(PLAYING_ROUND_UI)
 	ui.add_child(playing_round_ui_instance)
 
 	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager)

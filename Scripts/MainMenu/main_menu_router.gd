@@ -5,12 +5,12 @@ var main_menu_ui
 var main_scene_logic
 
 var round_config_panel_instance = null
-var round_config_panel = preload("res://Scenes/MainMenu/Panels/RoundConfig/round_config_panel.tscn")
+const ROUND_CONFIG_PANEL = "res://Scenes/MainMenu/Panels/RoundConfig/round_config_panel.tscn"
 
-var round_config_node = preload("res://Scenes/ConfigureRound/round_config.tscn")
+const ROUND_CONFIG_NODE = "res://Scenes/ConfigureRound/round_config.tscn"
 
 var load_panel_instance = null
-var load_panel = preload("res://Scenes/MainMenu/Panels/LoadPanel/load_game_panel.tscn")
+const LOAD_PANEL = "res://Scenes/MainMenu/Panels/LoadPanel/load_game_panel.tscn"
 
 func initialize(menu_state, ui, logic):
 	main_menu_state = menu_state
@@ -41,7 +41,7 @@ func create_round_config_panel():
 	if round_config_panel_instance != null:
 		return
 
-	round_config_panel_instance = round_config_panel.instantiate()
+	round_config_panel_instance = SceneLoader.instantiate(ROUND_CONFIG_PANEL)
 	main_menu_ui.panels.add_child(round_config_panel_instance)
 	round_config_panel_instance.initialize(main_scene_logic.get_system("round_config"))
 
@@ -49,7 +49,7 @@ func create_round_config_node():
 	if main_scene_logic.get_system("round_config") != null:
 		return
 
-	var config = round_config_node.instantiate()
+	var config = SceneLoader.instantiate(ROUND_CONFIG_NODE)
 	main_scene_logic.add_child(config)
 	main_scene_logic.register("round_config", config)
 
@@ -66,7 +66,7 @@ func create_load_panel():
 	if load_panel_instance != null:
 		return
 
-	load_panel_instance = load_panel.instantiate()
+	load_panel_instance = SceneLoader.instantiate(LOAD_PANEL)
 	main_menu_ui.panels.add_child(load_panel_instance)
 	load_panel_instance.initialize(main_scene_logic.get_system("round_config"))
 
