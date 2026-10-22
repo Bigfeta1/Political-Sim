@@ -1,5 +1,7 @@
 extends Node
 
+const CountryFiles = preload("res://Scripts/Data/country_files.gd")
+
 func run(configurator):
 	var config = configurator.config
 	var country_factory = configurator.logic.get_system("country_manager").country_logic.country_factory
@@ -28,15 +30,11 @@ func get_candidate_ids(config) -> Array:
 	var ids := []
 
 	for file_path in config.country_files:
-		var country_id = read_country_id(file_path)
+		var country_id = CountryFiles.read(file_path)["id"]
 		if country_id != config.player_country_id:
 			ids.append(country_id)
 
 	return ids
-
-func read_country_id(file_path: String) -> String:
-	var country_data = JSON.parse_string(FileAccess.get_file_as_string(file_path))
-	return country_data["id"]
 #endregion
 
 #region Creation

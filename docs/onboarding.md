@@ -26,6 +26,7 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 | `Scripts/MainScene/` | `main_scene.gd` and `logic.gd`, the registry (see below). |
 | `Scripts/MainMenu/` | `main_menu_router.gd`, the menu's own router, and `Panels/begin_button.gd`. |
 | `Scripts/PlayerManager/` | `player_data.gd`, the data node on each country. |
+| `Scripts/Data/` | Static helpers for reading files: `country_files.gd` (country JSON) and `save_file.gd` (save files). Not nodes; callers `preload` them. |
 
 Three scripts sit outside this pattern: `Scenes/MainMenu/Buttons/new_game_button.gd` lives beside the scenes, and `Scripts/MainMenu/Panels/begin_button.gd` and `Scripts/MainMenu/main_menu_router.gd` live in a `MainMenu` folder at the scripts root.
 
@@ -41,6 +42,7 @@ Every piece has one job, is handed what it needs, and is created and freed by th
 - **Scenes load when needed, through `SceneLoader`.** Scripts hold scene paths as constants and call `SceneLoader.instantiate(PATH)` at the point of use. They do not `preload` scenes or keep `PackedScene` variables. Scripts can still be preloaded.
 - **Systems describe their own saved state.** Each stateful system has `get_save_data()` and `load_save_data(data)`. The save writer collects, and loading rebuilds through the normal setup steps instead of a separate path.
 - **Autoloads are for things that cannot be injected.** `GameState`, `SaveWriter` and `SceneLoader` exist because callers (buttons, the input handler, factories, steps) are not handed a reference to them. Anything else is registered or injected.
+- **File reading goes through `Scripts/Data/`.** Country JSON is read only through `country_files.gd` (`find_paths()`, `read(path)`, `find_by_id(id)`) and saves only through `save_file.gd` (`read(path)`, `find_player_id(save_data)`). These are static functions on scripts that callers `preload`, so nothing is registered or injected.
 - **Small scripts over big ones.** A new concern gets a new script, even a short one. Existing scripts do not grow code that does not belong to them.
 
 ## Main scene and the Logic registry
@@ -142,8 +144,8 @@ The round configurator runs a list of steps in order, builds the systems a round
 | --- | --- | --- | --- |
 | 1 | `CreateCountryManager` | `create_country_manager_step.gd` | Instantiates the country manager under `Logic`, registers it as `country_manager`, and calls its `initialize()`. |
 | 2 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates the state manager (with `TurnManager` and `PhaseManager`) under `Logic` and registers it as `state_manager`. |
-| 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Connects the factory's `country_created` signal to `TurnManager.add_player`, then creates the country whose id is `config.player_country_id`. |
-| 4 | `CreatePlayers` | `create_players_manager.gd` | Creates the opponents through the factory, so they register with the turn manager. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
+| 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Creates the country whose id is `config.player_country_id` and sets its `is_player`. |
+| 4 | `CreatePlayers` | `create_players_step.gd` | Creates the opponents through the factory. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
 | 5 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
 | 6 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. |
 
@@ -263,11 +265,9 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Steps finish instantly.** All the configurator steps are synchronous, so the whole configure state runs in one frame and the checklist UI is replaced before it can be seen. It becomes visible once a step awaits something. The same applies to the background load of the playing round scenes, which starts when configure begins: with every step finishing in one frame it has no time to run ahead, so the prefetch has no measurable effect yet.
 - **Unclaimed requests.** A scene requested through `SceneLoader.request` is only released from the background loader once `instantiate` claims it. `CONFIGURE_ROUND` always ends in `PLAYING_ROUND` today, so it is claimed. A way to cancel setup would leave the request unclaimed.
 - **Scene loading is unmeasured.** Nothing has been timed, so it is not known which scenes or steps are slow. Measure before adding more prefetches.
-- **Same-state guards do nothing.** In `GameState.change_state` and `PhaseManager.advance_phase`, the `if current == new: pass` check does not return, so a repeated request still emits.
 - **No first phase.** Nothing moves `PhaseManager` off `STANDBY`. Planned: a final configurator step that calls `next_phase()` and `set_round(1)`, and replaces the `next_turn()` call in `SetTurnOrder`. Until then the phase becomes `ECONOMIC_PHASE` only after the first full pass of END TURN, and `current_round` stays 0 until the first full cycle completes.
 - **Fixed turn order.** Initiative is read once at setup. Re-sorting each phase means moving the sort out of `SetTurnOrder` into runtime code that can see the country nodes.
 - **Player count is fixed.** `RoundConfig.player_count` is 3. The panel does not expose it, and opponents are always random, with no per-opponent choice.
-- **Step script name.** The `CreatePlayers` node still uses `create_players_manager.gd`, so the node and file names differ.
 - **Nothing listens to `round_changed`.** There is no round label yet.
 - **Save and load are untested.** F5 save, the load entry, the X button and the restore step have been written but not run in the editor.
 - **One save slot.** F5 overwrites `user://saves/save.json`. Multiple slots would need a name per save and a list in the load panel.
@@ -275,4 +275,5 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Saved countries must exist.** A save naming a country with no JSON file would fail in the factory. This is accepted for now.
 - **No runtime country values are saved.** `Data` declares population, money and public image, but nothing sets them yet.
 - **Stubs.** `GameInitializer` stores the country manager and does nothing; the phases have names and a cycle but no behaviour.
-- **Open editor error.** The editor reports `Could not resolve script "res://Scripts/Logic/round_config.gd"` at line 7 of `country_factory.gd`. The file exists at that path and the cause has not been found.
+- **Open editor error, unconfirmed.** The editor reported `Could not resolve script "res://Scripts/Logic/round_config.gd"` at line 7 of `country_factory.gd`, which was a `preload` of `round_config.gd`. Nothing preloads `round_config.gd` any more, but the editor has not been opened since, so it is not known whether the error is gone.
+- **New scripts have no `.uid` files.** `country_files.gd` and `save_file.gd` get them when the editor next scans the project.
