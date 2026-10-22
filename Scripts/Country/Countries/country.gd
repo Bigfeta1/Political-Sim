@@ -4,21 +4,23 @@ extends Node
 @onready var population = $Parameters/Population
 @onready var economy = $Parameters/Economy
 @onready var public_image = $Parameters/PublicImage
+@onready var parameters = $Parameters
 
 func _ready() -> void:
-	data.initialize(population, economy, public_image)
+	data.initialize(parameters)
 
+# Every parameter node with save functions is included; nodes without a script are skipped.
 func get_save_data() -> Dictionary:
 	var save_data := {
 		"id": data.id,
 		"is_player": data.is_player,
 	}
-	save_data.merge(population.get_save_data())
-	save_data.merge(economy.get_save_data())
-	save_data.merge(public_image.get_save_data())
+	for parameter in parameters.get_children():
+		if parameter.has_method("get_save_data"):
+			save_data.merge(parameter.get_save_data())
 	return save_data
 
 func load_save_data(save_data: Dictionary) -> void:
-	population.load_save_data(save_data)
-	economy.load_save_data(save_data)
-	public_image.load_save_data(save_data)
+	for parameter in parameters.get_children():
+		if parameter.has_method("load_save_data"):
+			parameter.load_save_data(save_data)

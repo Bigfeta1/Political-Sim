@@ -21,7 +21,7 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 | `Scenes/country.tscn` | One country instance, with `Data` and a `Parameters` tree (see Country data). |
 | `Scripts/Autoload/` | The three autoloads: `game_state.gd` (`GameState`), `save_writer.gd` (`SaveWriter`) and `scene_loader.gd` (`SceneLoader`). |
 | `Scripts/Logic/` | `state_router.gd`, `round_config.gd`, and one folder per area: `MainMenu/` (with `RoundConfig/` and `LoadPanel/` for the panels' logic), `RoundConfigurator/`, `PlayingRound/`. |
-| `Scripts/UI/` | UI scripts, one folder per area: `MainMenu/` (with `Panels/RoundConfig/` and `Panels/LoadPanel/`), `ConfigureRound/`, `PlayingRound/` (with `TopBar/`). |
+| `Scripts/UI/` | UI scripts, one folder per area: `MainMenu/` (with `Panels/RoundConfig/` and `Panels/LoadPanel/`), `ConfigureRound/`, `PlayingRound/` (with `TopBar/`: `top_bar.gd` and `parameter_label.gd`). |
 | `Scripts/Country/` | `Countries/country.gd`, `Parameters/` (one script per parameter node: `population.gd`, `economy.gd`, `public_image.gd`) and `CountryManager/` (manager, logic, factory, list). `country_manager.gd` has `get_player_country()`, which returns the country in `CountryList` whose `data.is_player` is true. |
 | `Scripts/MainScene/` | `main_scene.gd` and `logic.gd`, the registry (see below). |
 | `Scripts/MainMenu/` | `main_menu_router.gd`, the menu's own router, and `Panels/begin_button.gd`. |
@@ -174,9 +174,9 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 
 **Parameter nodes own the values.** Each parameter script holds its values, emits a `<name>_changed(new_value)` signal from each value's setter, and has its own `get_save_data()` and `load_save_data(data)` for its keys. Logic for a parameter (for example, how population grows) belongs in its script.
 
-**`Data` only reads and writes.** It stores `id`, `is_player`, `country_name` and `country_initiative` itself. Its other fields (`country_money`, `country_public_image`, `country_life_expectancy`, `country_population`) have a getter and setter that go straight to the parameter node, so `data.country_money = 5` sets `economy.money`. `Data` has no signals and no save or load functions. `country.gd` passes it the parameter nodes in `_ready()` through `data.initialize(population, economy, public_image)`.
+**`Data` only reads and writes.** It stores `id`, `is_player`, `country_name` and `country_initiative` itself. Its other fields (`country_money`, `country_public_image`, `country_life_expectancy`, `country_population`) have a getter and setter that go straight to the parameter node, so `data.country_money = 5` sets `economy.money`. `Data` has no signals and no save or load functions. `country.gd` passes it the `Parameters` node in `_ready()` through `data.initialize(parameters)`, and `initialize` takes each parameter node from it by name (`parameters.get_node("Economy")`).
 
-**`country.gd` saves and loads the country.** It has `@onready` references to `data`, `population`, `economy` and `public_image`. Its `get_save_data()` writes `id` and `is_player` from `Data` and merges in each parameter node's save data, and `load_save_data(save_data)` passes the save on to each parameter node.
+**`country.gd` saves and loads the country.** It has `@onready` references to `data`, `parameters`, `population`, `economy` and `public_image`. Its `get_save_data()` writes `id` and `is_player` from `Data`, then loops over the children of `Parameters` and merges in the save data of each one that has `get_save_data()`. `load_save_data(save_data)` loops the same way and passes the save to each child that has `load_save_data()`. Nodes without a script (Army, Production, Factions) are skipped, and a new parameter node with save functions is saved without editing `country.gd`.
 
 **Base values come from JSON.** The factory's `configure_country` copies each key from the country's JSON file through `Data` when the country is created. `create_country` adds the country to the tree first, so `_ready()` has already connected `Data` to its nodes. Every key below is read unconditionally, so a JSON file missing one errors in the factory.
 
@@ -199,16 +199,16 @@ The playing round does not own its systems. It is a thin scene that receives the
 - **Logic (`playing_round_logic.tscn`).** A `PlayingRound` node with an `EventCoordinators` child that holds `GameInitializer`. The router calls `initialize(country_manager)`, which passes the manager down to the initializer. `GameInitializer` only stores it so far.
 - **Systems.** The country manager and state manager were created and registered during configure. The router reads `state_manager` from the registry and takes `turn_manager` and `phase_manager` from it.
 - **UI (`playing_round_ui.tscn`).** The router gets the player's country from `country_manager.get_player_country()` and calls `initialize(state_manager, phase_manager, turn_manager, player_country)`. `PhaseLabel` and `TurnLabel` each draw their current value on initialize and update on `phase_changed` and `turn_changed`. `TurnLabel` reads the current country from `TurnManager.get_current_turn()` and shows "STANDBY" when there is none. The end-turn button (`Buttons/EndTurnButton`) holds the state manager and calls `state_manager.turn_manager.next_turn()`.
-- **Top bar.** `TopBar` (`top_bar.gd`) receives the player's country and passes it to the four labels in `TopBar/HBoxContainer`. Each label keeps the country's `Data` and draws its starting value from it, connects to its value's signal on the parameter node (for example `player_country.economy.money_changed`), and redraws on change, the same way `PhaseLabel` works. The scripts are in `Scripts/UI/PlayingRound/TopBar/`.
+- **Top bar.** `TopBar` (`top_bar.gd`) receives the player's country and passes it to the four labels in `TopBar/HBoxContainer`. All four use one script, `Scripts/UI/PlayingRound/TopBar/parameter_label.gd`, set up per label in the scene through four exported settings: `symbol`, `parameter` (the node name under `Parameters`), `value` (the value's name on that node) and `format`. On initialize a label draws its starting value from `Data`'s `country_<value>`, connects to `<value>_changed` on the parameter node, and redraws on change, the same way `PhaseLabel` works. So a new value only displays correctly if its `Data` field and signal follow those names.
 
-| Label | Script | Shows |
-| --- | --- | --- |
-| `MoneyLabel` | `money_label.gd` | `$` then trillions with one decimal (`$ 139.9T`), or whole billions below 1000 (`$ 850B`) |
-| `PublicImageLabel` | `public_image_label.gd` | `★` then the raw value (`★ 5.0`) |
-| `LifeExpectancyLabel` | `life_expectancy_label.gd` | `♥` then the value rounded to whole years (`♥ 78`). Only the display is rounded. |
-| `PopulationLabel` | `population_label.gd` | `☻` then billions or millions with one decimal (`☻ 1.4B`, `☻ 340.0M`), or the raw number below a million |
+| Label | `symbol` | `parameter` | `value` | `format` | Shows |
+| --- | --- | --- | --- | --- | --- |
+| `MoneyLabel` | `$` | `Economy` | `money` | `BILLIONS_OF_USD` | Trillions with one decimal (`$ 139.9T`), or whole billions below 1000 (`$ 850B`) |
+| `PublicImageLabel` | `★` | `PublicImage` | `public_image` | `PLAIN` | The raw value (`★ 5.0`) |
+| `LifeExpectancyLabel` | `♥` | `Population` | `life_expectancy` | `WHOLE` | Rounded to whole years (`♥ 78`). Only the display is rounded. |
+| `PopulationLabel` | `☻` | `Population` | `population` | `PEOPLE` | Billions or millions with one decimal (`☻ 1.4B`, `☻ 340.0M`), or the raw number below a million |
 
-The symbols are a placeholder for icon images.
+A new number format is a new `Format` value and a branch in `format_value`. The symbols are a placeholder for icon images.
 - **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
 - **Teardown.** The router frees the UI on `MAIN_MENU`. `logic.clear()` frees the playing round logic, the country manager and the state manager together.
 
@@ -303,11 +303,11 @@ Today only one prefetch exists: `StateRouter` requests the playing round logic a
 **Add a country value**
 
 1. Add the key to every file in `Data/Country_Data/`.
-2. Put the value on the parameter node it belongs to, with a setter that emits `<name>_changed`, and add it to that node's `get_save_data()` and `load_save_data()`. If the node has no script yet, write one in `Scripts/Country/Parameters/` like `economy.gd`, attach it in `country.tscn`, add an `@onready` for it in `country.gd`, pass it to `data.initialize`, and add it to `country.gd`'s `get_save_data()` and `load_save_data()`.
-3. In `player_data.gd`, add a field whose getter and setter go to the node.
+2. Put the value on the parameter node it belongs to, with a setter that emits `<name>_changed`, and add it to that node's `get_save_data()` and `load_save_data()`. If the node has no script yet, write one in `Scripts/Country/Parameters/` like `economy.gd`, attach it in `country.tscn`, and add an `@onready` for it in `country.gd` so the UI can reach its signals. `country.gd` picks up its save functions on its own.
+3. In `player_data.gd`, add a field whose getter and setter go to the node. If the node is new, also add a `<name>_node` variable and set it in `initialize` with `parameters.get_node("<NodeName>")`.
 4. Read the key in `country_factory.gd`'s `configure_country`.
 5. Bump `SAVE_VERSION`, since the save format changed.
-6. To show it, add a label under `TopBar/HBoxContainer` with a script like `money_label.gd` that draws from `Data` and connects to the node's signal, and initialize it in `top_bar.gd`.
+6. To show it, add a label under `TopBar/HBoxContainer` with `parameter_label.gd`, fill in its four settings in the inspector, and initialize it in `top_bar.gd`.
 
 ## Known gaps and next steps
 

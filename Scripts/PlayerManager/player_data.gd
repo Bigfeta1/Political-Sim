@@ -39,7 +39,7 @@ var country_public_image:
 		public_image_node.public_image = value
 
 
-func initialize(population_reference, economy_reference, public_image_reference):
-	population_node = population_reference
-	economy_node = economy_reference
-	public_image_node = public_image_reference
+func initialize(parameters):
+	population_node = parameters.get_node("Population")
+	economy_node = parameters.get_node("Economy")
+	public_image_node = parameters.get_node("PublicImage")
