@@ -4,7 +4,7 @@ signal country_created(new_country: Node)
 
 var country_list
 
-const GameConfig = preload("res://Scripts/Logic/game_config.gd")
+const GameConfig = preload("res://Scripts/Logic/round_config.gd")
 
 var countries: Array = []
 

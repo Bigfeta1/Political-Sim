@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://plbhvhtrjbrd"]
 
-[ext_resource type="Script" uid="uid://jcac6xvcgdb6" path="res://Scripts/Logic/game_config.gd" id="1_0hnby"]
+[ext_resource type="Script" uid="uid://jcac6xvcgdb6" path="res://Scripts/Logic/round_config.gd" id="1_0hnby"]
 
 [node name="RoundConfig" type="Node"]
 script = ExtResource("1_0hnby")

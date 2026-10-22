@@ -1,61 +1,67 @@
-[gd_scene load_steps=4 format=3 uid="uid://t3buhnnm2vp5"]
+[gd_scene load_steps=6 format=3 uid="uid://t3buhnnm2vp5"]
 
 [ext_resource type="Script" uid="uid://bxgg3fh2v617e" path="res://Scripts/UI/MainMenu/Panels/RoundConfig/round_config_panel.gd" id="1_g1e1n"]
 [ext_resource type="Script" uid="uid://cbn3xyofkssdf" path="res://Scripts/MainMenu/Panels/begin_button.gd" id="2_g1e1n"]
+[ext_resource type="Script" uid="uid://d2ddg31x0yuiu" path="res://Scripts/Logic/MainMenu/RoundConfig/country_entry_factory.gd" id="3_factory"]
+[ext_resource type="Script" uid="uid://dqcslpj1tarsk" path="res://Scripts/Logic/MainMenu/RoundConfig/country_selector.gd" id="4_selector"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
 font_size = 32
 
-[node name="RoundConfig" type="Panel"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -400.0
-offset_top = -250.0
-offset_right = 400.0
-offset_bottom = 250.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="RoundConfig" type="Node"]
 script = ExtResource("1_g1e1n")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="Logic" type="Node" parent="."]
+
+[node name="CountryEntryFactory" type="Node" parent="Logic"]
+script = ExtResource("3_factory")
+
+[node name="CountrySelector" type="Node" parent="Logic"]
+script = ExtResource("4_selector")
+
+[node name="Panel" type="Panel" parent="."]
+offset_left = 176.0
+offset_top = 74.0
+offset_right = 976.0
+offset_bottom = 574.0
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel"]
 layout_mode = 0
 offset_right = 800.0
 offset_bottom = 500.0
 theme_override_constants/margin_top = 20
 
-[node name="Title" type="Label" parent="MarginContainer"]
+[node name="Title" type="Label" parent="Panel/MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 0
 text = "CHOOSE YOUR COUNTRY"
 label_settings = SubResource("LabelSettings_quu0i")
 horizontal_alignment = 1
 
-[node name="CountryScroll" type="ScrollContainer" parent="."]
+[node name="CountryScroll" type="ScrollContainer" parent="Panel"]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 95.0
 offset_right = 780.0
 offset_bottom = 480.0
 
-[node name="CountryList" type="VBoxContainer" parent="CountryScroll"]
+[node name="CountryList" type="VBoxContainer" parent="Panel/CountryScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BeginButton" type="Button" parent="."]
+[node name="BeginButton" type="Button" parent="Panel"]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -57.0
 offset_top = 31.0
-offset_right = 155.0
-offset_bottom = 57.0
+offset_right = 163.0
+offset_bottom = 49.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "BEGIN"
 script = ExtResource("2_g1e1n")
+
+[connection signal="entry_created" from="Logic/CountryEntryFactory" to="Logic/CountrySelector" method="track_entry"]
