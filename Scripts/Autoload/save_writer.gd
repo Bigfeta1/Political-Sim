@@ -2,7 +2,7 @@ extends Node
 
 const SAVE_DIR = "user://saves/"
 const SAVE_PATH = SAVE_DIR + "save.json"
-const SAVE_VERSION = 2
+const SAVE_VERSION = 3
 
 var logic
 
@@ -15,7 +15,7 @@ func save() -> void:
 
 	var countries := []
 	for country in country_manager.country_list.get_children():
-		countries.append(country.data.get_save_data())
+		countries.append(country.get_save_data())
 
 	var save_data := {
 		"version": SAVE_VERSION,

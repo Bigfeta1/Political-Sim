@@ -4,7 +4,7 @@ var country_data
 
 func initialize(player_country):
 	country_data = player_country.data
-	country_data.money_changed.connect(draw_text)
+	player_country.economy.money_changed.connect(draw_text)
 	draw_text(country_data.country_money)
 
 # Money is stored in billions of USD.

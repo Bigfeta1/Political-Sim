@@ -2,7 +2,7 @@
 
 Politics is a 4X-style strategy game built in Godot 4.5 (Forward Plus). Today it runs from a main menu through country selection (or loading a save) and round setup into a playing-round shell, and a round can be saved with F5.
 
-- **Working now:** pick one of six countries (America, China, Germany, Israel, Russia, UK), press BEGIN, and watch the round get assembled with two random opponents. You land in a playing round where END TURN steps through the countries in initiative order. After the last country the phase advances and the turns start over.
+- **Working now:** pick one of six countries (America, China, Germany, Israel, Russia, UK), press BEGIN, and watch the round get assembled with two random opponents. You land in a playing round where a top bar shows your country's money, public image, life expectancy and population, and END TURN steps through the countries in initiative order. After the last country the phase advances and the turns start over.
 - **Saving and loading:** F5 in the playing round writes one save file. LOAD GAME in the menu lists it, and loading rebuilds the round through the same setup steps as a new game.
 - **Stubbed:** the phases (economic, proxy war, upkeep) have names and a cycle but no gameplay behind them, and nothing starts the first phase yet (see Known gaps).
 - **Focus so far:** the state progression from menu to round, the turn and phase system, and save and load, built so each piece has one job and can be swapped or extended without touching the others.
@@ -13,7 +13,7 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 
 | Path | What lives there |
 | --- | --- |
-| `Data/Country_Data/` | One JSON file per country, with `id`, `country_name` and `initiative` (1 to 5). Adding a file adds a country to the selection list. |
+| `Data/Country_Data/` | One JSON file per country with its base values (see Country data). Adding a file adds a country to the selection list. |
 | `Scenes/main_scene.tscn` | The entry scene (`run/main_scene`): `StateRouter`, `Logic`, `UI`. |
 | `Scenes/MainMenu/` | `Core/` holds the menu logic and UI scenes. `Panels/RoundConfig/` holds the round config panel and its country entry. `Panels/LoadPanel/` holds the load panel and its save entry. |
 | `Scenes/ConfigureRound/` | Everything that exists while a round is assembled: the round config node, the round configurator (logic and UI), the country manager, the state manager. |
@@ -21,11 +21,11 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 | `Scenes/country.tscn` | One country instance, with `Data` and a `Parameters` tree. |
 | `Scripts/Autoload/` | The three autoloads: `game_state.gd` (`GameState`), `save_writer.gd` (`SaveWriter`) and `scene_loader.gd` (`SceneLoader`). |
 | `Scripts/Logic/` | `state_router.gd`, `round_config.gd`, and one folder per area: `MainMenu/` (with `RoundConfig/` and `LoadPanel/` for the panels' logic), `RoundConfigurator/`, `PlayingRound/`. |
-| `Scripts/UI/` | UI scripts, one folder per area: `MainMenu/` (with `Panels/RoundConfig/` and `Panels/LoadPanel/`), `ConfigureRound/`, `PlayingRound/`. |
-| `Scripts/Country/` | `Countries/country.gd` and `CountryManager/` (manager, logic, factory, list). |
+| `Scripts/UI/` | UI scripts, one folder per area: `MainMenu/` (with `Panels/RoundConfig/` and `Panels/LoadPanel/`), `ConfigureRound/`, `PlayingRound/` (with `TopBar/`). |
+| `Scripts/Country/` | `Countries/country.gd` and `CountryManager/` (manager, logic, factory, list). `country_manager.gd` has `get_player_country()`, which returns the country in `CountryList` whose `data.is_player` is true. |
 | `Scripts/MainScene/` | `main_scene.gd` and `logic.gd`, the registry (see below). |
 | `Scripts/MainMenu/` | `main_menu_router.gd`, the menu's own router, and `Panels/begin_button.gd`. |
-| `Scripts/PlayerManager/` | `player_data.gd`, the data node on each country. |
+| `Scripts/PlayerManager/` | `player_data.gd`, the data node on each country (see Country data). |
 | `Scripts/Data/` | Static helpers for reading files: `country_files.gd` (country JSON) and `save_file.gd` (save files). Not nodes; callers `preload` them. |
 
 Three scripts sit outside this pattern: `Scenes/MainMenu/Buttons/new_game_button.gd` lives beside the scenes, and `Scripts/MainMenu/Panels/begin_button.gd` and `Scripts/MainMenu/main_menu_router.gd` live in a `MainMenu` folder at the scripts root.
@@ -147,7 +147,7 @@ The round configurator runs a list of steps in order, builds the systems a round
 | 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Creates the country whose id is `config.player_country_id` and sets its `is_player`. |
 | 4 | `CreatePlayers` | `create_players_step.gd` | Creates the opponents through the factory. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
 | 5 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
-| 6 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. |
+| 6 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. Then `restore_countries` matches each country to its saved entry by `id` and calls `data.load_save_data`, which overwrites the base values from the JSON. |
 
 **How it runs.**
 
@@ -158,13 +158,41 @@ The round configurator runs a list of steps in order, builds the systems a round
 
 **Checklist UI.** `round_configurator_ui.tscn` is created by the router next to the configurator. For each step it adds a read-only checkbox labelled with the step's node name (for example, `CreateCountryManager` shows as "Create Country Manager") and ticks it on `step_completed`. The steps know nothing about the UI.
 
+## Country data
+
+Each country is a `country.tscn` instance, and its values live on its `Data` node (`player_data.gd`). The factory's `configure_country` copies the base values from the country's JSON file onto `Data` when the country is created. Every key below is read unconditionally, so a JSON file missing one errors in the factory.
+
+| JSON key | `Data` field | Unit | Base values from |
+| --- | --- | --- | --- |
+| `id` | `id` | | |
+| `country_name` | `country_name` | | |
+| `initiative` | `country_initiative` | 1 to 5 | Game design |
+| `money` | `country_money` | Billions of USD | Total household wealth, 2022 (UBS / Credit Suisse Global Wealth Databook 2022) |
+| `public_image` | `country_public_image` | 0 to 10 | 5 for every country, a placeholder |
+| `life_expectancy` | `country_life_expectancy` | Years | Life expectancy at birth, mostly 2021–2023 (GBD, CDC). Israel's is from 2014. |
+| `population` | `country_population` | People | World Bank total population, 2024 (indicator `SP.POP.TOTL`) |
+
+`country_money`, `country_public_image`, `country_life_expectancy` and `country_population` have setters that emit `money_changed`, `public_image_changed`, `life_expectancy_changed` and `population_changed` with the new value. Code that changes a value only assigns it; anything showing it listens to the signal.
+
+Godot's JSON parser reads every number as a float, so the values on `Data` are floats. The labels format them for display.
+
 ## Playing round
 
 The playing round does not own its systems. It is a thin scene that receives the country manager, and its UI is wired to the state manager the configurator already built.
 
 - **Logic (`playing_round_logic.tscn`).** A `PlayingRound` node with an `EventCoordinators` child that holds `GameInitializer`. The router calls `initialize(country_manager)`, which passes the manager down to the initializer. `GameInitializer` only stores it so far.
 - **Systems.** The country manager and state manager were created and registered during configure. The router reads `state_manager` from the registry and takes `turn_manager` and `phase_manager` from it.
-- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager)`. `PhaseLabel` and `TurnLabel` each draw their current value on initialize and update on `phase_changed` and `turn_changed`. `TurnLabel` reads the current country from `TurnManager.get_current_turn()` and shows "STANDBY" when there is none. The end-turn button (`Buttons/EndTurnButton`) holds the state manager and calls `state_manager.turn_manager.next_turn()`.
+- **UI (`playing_round_ui.tscn`).** The router gets the player's country from `country_manager.get_player_country()` and calls `initialize(state_manager, phase_manager, turn_manager, player_country)`. `PhaseLabel` and `TurnLabel` each draw their current value on initialize and update on `phase_changed` and `turn_changed`. `TurnLabel` reads the current country from `TurnManager.get_current_turn()` and shows "STANDBY" when there is none. The end-turn button (`Buttons/EndTurnButton`) holds the state manager and calls `state_manager.turn_manager.next_turn()`.
+- **Top bar.** `TopBar` (`top_bar.gd`) receives the player's country and passes it to the four labels in `TopBar/HBoxContainer`. Each label keeps the country's `Data`, connects to its value's signal, draws once on initialize and redraws on change, the same way `PhaseLabel` works. The scripts are in `Scripts/UI/PlayingRound/TopBar/`.
+
+| Label | Script | Shows |
+| --- | --- | --- |
+| `MoneyLabel` | `money_label.gd` | `$` then trillions with one decimal (`$ 139.9T`), or whole billions below 1000 (`$ 850B`) |
+| `PublicImageLabel` | `public_image_label.gd` | `★` then the raw value (`★ 5.0`) |
+| `LifeExpectancyLabel` | `life_expectancy_label.gd` | `♥` then the value rounded to whole years (`♥ 78`). Only the display is rounded. |
+| `PopulationLabel` | `population_label.gd` | `☻` then billions or millions with one decimal (`☻ 1.4B`, `☻ 340.0M`), or the raw number below a million |
+
+The symbols are a placeholder for icon images.
 - **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
 - **Teardown.** The router frees the UI on `MAIN_MENU`. `logic.clear()` frees the playing round logic, the country manager and the state manager together.
 
@@ -197,15 +225,15 @@ The turn order is computed once, during `SetTurnOrder`. It does not change betwe
 
 | Key | Source |
 | --- | --- |
-| `version` | `SAVE_VERSION` (1). Written but not checked on load. |
+| `version` | `SAVE_VERSION` (3). Written but not checked on load. |
 | `round` | `StateManager.get_save_data()`: `current_round` |
 | `phase` | `PhaseManager.get_save_data()`: `current_phase` |
 | `turn` | `TurnManager.get_save_data()`: `turn_order`, `current_turn_index` |
-| `countries` | Each country's `Data.get_save_data()`: `id`, `is_player` |
+| `countries` | Each country's `Data.get_save_data()`: `id`, `is_player`, `money`, `public_image`, `life_expectancy`, `population` |
 
-Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
+Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, life expectancy and population are saved because they are meant to change during play; the JSON only holds their base values. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
 
-**Load.** There is no separate load path. The load button puts the parsed save on the `round_config` node and requests `CONFIGURE_ROUND`, and the normal steps build the round to that config. `CreatePlayerCountry` reads the player id from the config unchanged, `CreatePlayers` creates the saved opponents, and `RestoreSavedState` applies round, phase and turn. `load_save_data` sets fields directly. `PhaseManager` must not go through `advance_phase`, because `phase_changed` calls `start_turns` and would reset the turn index.
+**Load.** There is no separate load path. The load button puts the parsed save on the `round_config` node and requests `CONFIGURE_ROUND`, and the normal steps build the round to that config. `CreatePlayerCountry` reads the player id from the config unchanged, `CreatePlayers` creates the saved opponents, and `RestoreSavedState` applies round, phase and turn, then each country's saved values. The countries are first created from their JSON and then overwritten from the save. `load_save_data` sets fields directly. `PhaseManager` must not go through `advance_phase`, because `phase_changed` calls `start_turns` and would reset the turn index.
 
 ## Scene loading
 
@@ -254,7 +282,15 @@ Today only one prefetch exists: `StateRouter` requests the playing round logic a
 
 **Add a country**
 
-- Drop a JSON file with `id`, `country_name` and `initiative` into `Data/Country_Data/`. The factory reads `initiative` unconditionally, so a file without it errors. It appears in the selection list the next time the panel opens.
+- Drop a JSON file with every key in the Country data table into `Data/Country_Data/`. The factory reads all of them unconditionally, so a file missing one errors. It appears in the selection list the next time the panel opens.
+
+**Add a country value**
+
+1. Add the key to every file in `Data/Country_Data/`.
+2. In `player_data.gd`, add a `<name>_changed` signal and a field whose setter emits it.
+3. Read the key in `country_factory.gd`'s `configure_country`.
+4. If it can change during play, add it to `Data.get_save_data()` and `load_save_data()` and bump `SAVE_VERSION`.
+5. To show it, add a label under `TopBar/HBoxContainer` with a script like `money_label.gd`, and initialize it in `top_bar.gd`.
 
 ## Known gaps and next steps
 
@@ -271,9 +307,10 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Nothing listens to `round_changed`.** There is no round label yet.
 - **Save and load are untested.** F5 save, the load entry, the X button and the restore step have been written but not run in the editor.
 - **One save slot.** F5 overwrites `user://saves/save.json`. Multiple slots would need a name per save and a list in the load panel.
-- **Version is not checked.** `version` is written and ignored on load.
+- **Version is not checked.** `version` is written and ignored on load. A save from before version 3 has no `money`, `public_image`, `life_expectancy` or `population` and errors in `load_save_data`.
 - **Saved countries must exist.** A save naming a country with no JSON file would fail in the factory. This is accepted for now.
-- **No runtime country values are saved.** `Data` declares population, money and public image, but nothing sets them yet.
+- **Country values never change.** Money, public image, life expectancy and population are loaded, shown and saved, but nothing in play changes them yet.
+- **Money measure is open.** `money` is total household wealth (2022). Gross national assets (about $269 trillion for the US) and net national wealth were discussed as alternatives; a comparable source for all six countries has not been found.
+- **Top bar is untested in a run.** The labels, their formatting and whether the font draws `★`, `♥` and `☻` have not been confirmed by running the game.
 - **Stubs.** `GameInitializer` stores the country manager and does nothing; the phases have names and a cycle but no behaviour.
 - **Open editor error, unconfirmed.** The editor reported `Could not resolve script "res://Scripts/Logic/round_config.gd"` at line 7 of `country_factory.gd`, which was a `preload` of `round_config.gd`. Nothing preloads `round_config.gd` any more, but the editor has not been opened since, so it is not known whether the error is gone.
-- **New scripts have no `.uid` files.** `country_files.gd` and `save_file.gd` get them when the editor next scans the project.

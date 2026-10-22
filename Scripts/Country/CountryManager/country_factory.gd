@@ -29,4 +29,5 @@ func configure_country(country, country_name):
 	country_node_data.country_money = country_data["money"]
 	country_node_data.country_public_image = country_data["public_image"]
 	country_node_data.country_life_expectancy = country_data["life_expectancy"]
+	country_node_data.country_population = country_data["population"]
 #endregion

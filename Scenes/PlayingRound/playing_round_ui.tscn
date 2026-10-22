@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://c7tujkmu1pocv"]
+[gd_scene load_steps=10 format=3 uid="uid://c7tujkmu1pocv"]
 
 [ext_resource type="Script" uid="uid://bqsf2fx4s5bqj" path="res://Scripts/UI/PlayingRound/playing_round_ui.gd" id="1_ijrtg"]
 [ext_resource type="Script" uid="uid://4woou4sj0h05" path="res://Scripts/UI/PlayingRound/end_turn_button.gd" id="2_r6u7c"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://dvdhxw2o38a77" path="res://Scripts/UI/PlayingRound/TopBar/money_label.gd" id="6_money"]
 [ext_resource type="Script" uid="uid://bvf86w6bxwiik" path="res://Scripts/UI/PlayingRound/TopBar/public_image_label.gd" id="7_image"]
 [ext_resource type="Script" uid="uid://cgj5t8qbmq3fy" path="res://Scripts/UI/PlayingRound/TopBar/life_expectancy_label.gd" id="8_life"]
+[ext_resource type="Script" path="res://Scripts/UI/PlayingRound/TopBar/population_label.gd" id="9_population"]
 
 [node name="PlayingRound" type="Control"]
 layout_mode = 3
@@ -52,6 +53,10 @@ script = ExtResource("7_image")
 [node name="LifeExpectancyLabel" type="Label" parent="TopBar/HBoxContainer"]
 layout_mode = 2
 script = ExtResource("8_life")
+
+[node name="PopulationLabel" type="Label" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+script = ExtResource("9_population")
 
 [node name="Buttons" type="Control" parent="."]
 layout_mode = 1

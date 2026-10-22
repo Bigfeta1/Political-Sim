@@ -18,4 +18,4 @@ func restore_countries(country_manager, saved_countries: Array) -> void:
 	for country in country_manager.country_list.get_children():
 		for saved_country in saved_countries:
 			if saved_country["id"] == country.data.id:
-				country.data.load_save_data(saved_country)
+				country.load_save_data(saved_country)
