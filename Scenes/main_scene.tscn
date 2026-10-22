@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://bb5m6fn8raaa5"]
+
+[ext_resource type="Script" uid="uid://cngo4qtjt0spd" path="res://Scripts/MainScene/main_scene.gd" id="1_x6ack"]
+[ext_resource type="Script" uid="uid://vqyt2am72j8j" path="res://Scripts/Logic/state_router.gd" id="3_b48ew"]
+
+[node name="MainScene" type="Node"]
+script = ExtResource("1_x6ack")
+
+[node name="StateRouter" type="Node" parent="."]
+script = ExtResource("3_b48ew")
+
+[node name="Logic" type="Node" parent="."]
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Node3D" type="Node3D" parent="."]

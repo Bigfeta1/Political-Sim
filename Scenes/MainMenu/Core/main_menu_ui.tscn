@@ -1,0 +1,50 @@
+[gd_scene load_steps=4 format=3 uid="uid://dduja1f00vfup"]
+
+[ext_resource type="Script" uid="uid://m7dqda3psif1" path="res://Scripts/UI/MainMenu/main_menu_ui.gd" id="1_48xlc"]
+[ext_resource type="Script" uid="uid://w81gjwdxti3i" path="res://Scripts/UI/MainMenu/Buttons/buttons_ui.gd" id="2_1ehe0"]
+[ext_resource type="Script" uid="uid://x05jmrh1l1no" path="res://Scenes/MainMenu/Buttons/new_game_button.gd" id="3_4pxk6"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_48xlc")
+
+[node name="Buttons" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_1ehe0")
+
+[node name="NewGameButton" type="Button" parent="Buttons"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -47.5
+offset_top = -15.5
+offset_right = 47.5
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "NEW GAME"
+script = ExtResource("3_4pxk6")
+
+[node name="Panels" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

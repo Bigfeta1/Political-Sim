@@ -1,0 +1,28 @@
+[gd_scene load_steps=2 format=3 uid="uid://t3buhnnm2vp5"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
+font_size = 32
+
+[node name="GameConfig" type="PanelContainer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -250.0
+offset_right = 400.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_top = 20
+
+[node name="Title" type="Label" parent="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+text = "CHOOSE YOUR COUNTRY"
+label_settings = SubResource("LabelSettings_quu0i")
+horizontal_alignment = 1
