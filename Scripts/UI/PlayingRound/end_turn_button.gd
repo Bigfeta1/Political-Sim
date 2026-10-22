@@ -11,4 +11,4 @@ func _ready() -> void:
 	pass # Replace with function body.
 
 func _pressed() -> void:
-	pass
+	state_manager.turn_manager.next_turn()

@@ -12,3 +12,7 @@ script = ExtResource("2_turn")
 
 [node name="PhaseManager" type="Node" parent="."]
 script = ExtResource("3_phase")
+
+[connection signal="all_turns_completed" from="TurnManager" to="PhaseManager" method="next_phase"]
+[connection signal="cycle_completed" from="PhaseManager" to="." method="_on_phase_manager_cycle_completed"]
+[connection signal="phase_changed" from="PhaseManager" to="TurnManager" method="start_turns" unbinds=1]
