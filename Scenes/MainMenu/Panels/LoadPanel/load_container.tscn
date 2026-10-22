@@ -19,3 +19,18 @@ offset_right = 245.0
 offset_bottom = 84.0
 text = "COUNTRY"
 label_settings = SubResource("LabelSettings_krmch")
+
+[node name="DeleteButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -60.0
+offset_top = -25.0
+offset_right = -10.0
+offset_bottom = 25.0
+grow_horizontal = 0
+grow_vertical = 2
+text = "X"
