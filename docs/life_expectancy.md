@@ -1,0 +1,186 @@
+# Life Expectancy Engine
+
+Each country's life expectancy is calculated from real WHO death rates per age band, and at game start it lands exactly on the country's WHO 2023 value. 
+Risk factors scale those death rates cause by cause. 
+Smoking is built in but has no effect yet, because no country has smoking prevalence data and nothing in play changes it.
+
+- **Calculated, not copied:** `life_expectancy.gd` runs an abridged life table over 7 age bands and 181 WHO causes of death.
+- **Calibrated:** the open-ended 70+ band is tuned once at start so the result equals the target.
+- **Static for now:** the value is calculated once, when the country is created. Nothing recalculates it during play yet.
+- **Not run in Godot yet:** the maths was checked in Python; the editor and the game have not opened these files.
+
+## Node structure
+
+The `Population` node in `country.tscn` has three children. `LifeExpectancy` holds the age bands and the risk factors it computes from.
+
+```
+Population             population.gd: merges its children's save data
+├─ Count               population_count.gd: population, population_changed
+├─ LifeExpectancy      life_expectancy.gd: life table, 70+ calibration, life_expectancy_changed
+│  ├─ AgeBands
+│  │  ├─ Age0To4       age_band.gd: key "0-4", start_age 0, width 5
+│  │  ├─ Age5To14 … Age60To69
+│  │  └─ Age70Plus     width 0 = the open-ended last band
+│  └─ RiskFactors
+│     └─ Smoking       risk_factor.gd: key "smoking"
+└─ Workers             workers.gd: head count per role
+```
+
+| Script | Job |
+| --- | --- |
+| `Scripts/Country/Parameters/Population/life_expectancy.gd` | Holds `target_life_expectancy`, `mortality` and `risk_prevalence`. Setting `mortality` fills the bands, calibrates and calculates. Emits `life_expectancy_changed`. |
+| `Scripts/Country/Parameters/Population/age_band.gd` | Holds a band's population and deaths per WHO cause. `death_rate(risk_factors)` multiplies each cause's deaths by every factor's multiplier. |
+| `Scripts/Country/Parameters/Population/risk_factor.gd` | Reads its RR file in `_ready()`. `multiplier(cause, band)` returns 1 when it has no prevalence or the band starts below `min_age`. |
+| `Scripts/Data/mortality_files.gd` | `find_by_id(id)` reads `Data/Mortality/mortality_<id>.json`. |
+| `Scripts/Data/risk_factor_files.gd` | `read(key)` reads `Data/RiskFactors/<key>.json`. |
+
+**Setup order.** `country_factory.gd` sets the target from the country JSON first, then the mortality data, which calibrates the 70+ band against it, then the risk prevalence. `Data` (`player_data.gd`) passes `country_target_life_expectancy`, `country_mortality` and `country_risk_prevalence` through to `LifeExpectancy`. `country_life_expectancy` is read-only.
+
+**Saving.** Life expectancy is calculated, so `LifeExpectancy` saves nothing. `SAVE_VERSION` is 5.
+
+## The maths
+
+Life expectancy at birth is the area under the survival curve. The engine computes it as a sum over age bands.
+
+```
+e0 = ∫ S(t) dt,   S(t) = exp(−∫ μ(s) ds)
+```
+
+**Closed bands (0-4 up to 60-69).** For a band starting at age x, width n, death rate m (all-cause deaths / population):
+
+```
+q(x)     = n·m / (1 + n/2 · m)          chance of dying in the band
+l(x+n)   = l(x) · (1 − q(x))            survivors at the band's end, l(0) = 1
+L(x)     = n·l(x+n) + n/2 · (l(x) − l(x+n))   years lived in the band
+```
+
+The years lived before 70 are the sum of L over the closed bands.
+
+**Open band (70+).** A single flat death rate over everyone past 70 overstates the years they live (USA: 20.0 years; Israel: 23.9). So at game start the band takes whatever years reproduce the target, and later scales inversely with its death rate:
+
+```
+e70_start = (e0_target − ΣL) / l(70)
+e0        = ΣL + l(70) · e70_start · m70_start / m70_now
+```
+
+The inverse scaling would be exact if the death rate were the same at every age past 70. It is not, so the real response is somewhat smaller.
+
+**Risk factors.** Each cause's deaths in a band are multiplied by every factor's multiplier for that cause. For a factor with exposure levels k (shares p, relative risks RR, reference level RR = 1):
+
+```
+multiplier = Σ p_now(k) · RR(k)  /  Σ p_start(k) · RR(k)
+```
+
+At game start the shares equal the start shares, so every multiplier is 1 and the engine reproduces the target. Bands starting below the factor's `min_age` are unaffected.
+
+## Data sources
+
+All death data and targets come from one WHO release (dated 2026-10-01, year 2023). Smoking risks come from one cohort study.
+
+| Data | Source | Project file | Notes |
+| --- | --- | --- | --- |
+| Deaths by cause and population, per age band | [WHO Global Health Estimates 2023](https://www.who.int/data/gho/data/themes/mortality-and-global-health-estimates/ghe-leading-causes-of-death), Persons | `Data/Mortality/mortality_<id>.json` | 7 bands, 181 leaf causes; leaves sum to WHO's All Causes in every band. Whole deaths and people. |
+| Life expectancy targets | WHO GHO indicator `WHOSIS_000001`, both sexes, 2023 | `life_expectancy` in `Data/Country_Data/country_<id>.json` | Same WHO release as the deaths. |
+| Smoking relative risks | [Joshy et al. 2025, BMC Medicine 23:115](https://europepmc.org/article/PMC/PMC11854379), Additional file 1, Table S7 (HR2) | `Data/RiskFactors/smoking.json` | Australian 45 and Up cohort; current and past vs never smokers. |
+| Smoking prevalence | Not found yet | `risk_prevalence` in each country JSON (empty `{}`) | WHO publishes current smokers only (USA 14.6%, 2023); former smokers needed. |
+
+| Country | WHO 2023 life expectancy (years) |
+| --- | --- |
+| America | 78.5 |
+| China | 77.9 |
+| Germany | 81.0 |
+| Israel | 82.6 |
+| Russia | 72.4 |
+| UK | 80.7 |
+
+The mortality and smoking files were built by Python scripts (`build_mortality.py`, `build_smoking.py`) that currently live only in a session scratchpad, not in the project.
+
+## Smoking relative risks
+
+55 WHO causes carry a smoking relative risk, applied from age 30 up. Never smokers are the reference (RR 1). Values are HR2 from Table S7, adjusted for age, sex, region, alcohol, income, education, insurance and country of birth, not for blood pressure or diabetes.
+
+| Paper's cause | WHO cause(s) | Current | Former |
+| --- | --- | --- | --- |
+| Chronic lung disease | Chronic obstructive pulmonary disease | 36.32 | 7.24 |
+| Cancer of lung | Trachea, bronchus, lung cancers | 17.85 | 5.52 |
+| Oro-pharyngeal cancers | Lip and oral cavity, Nasopharynx, Other pharynx, Larynx cancer | 7.86 | 1.89 |
+| Cancer of oesophagus | Oesophagus cancer | 4.10 | 1.84 |
+| Lower respiratory infections | Lower respiratory infections | 3.31 | 1.44 |
+| Cirrhosis or alcoholic liver | 4 cirrhosis causes | 3.29 | 1.40 |
+| Cancer of liver | 4 liver cancer causes | 3.14 | 1.32 |
+| Cancer of urinary tract | Bladder cancer | 2.96 | 1.88 |
+| Coronary heart disease | Ischaemic heart disease | 2.78 | 1.31 |
+| Cancer of pancreas | Pancreas cancer | 2.72 | 1.10 |
+| Other respiratory | Asthma, Other respiratory diseases | 2.65 | 1.68 |
+| Cancer of kidney | Kidney cancer | 2.52 | 1.21 |
+| Cerebrovascular disease | Ischaemic stroke, Haemorrhagic stroke | 2.30 | 1.04 |
+| Cancer of stomach | Stomach cancer | 2.04 | 1.04 |
+| Other circulatory | Rheumatic heart disease, Hypertensive heart disease, Cardiomyopathy…, Other circulatory diseases | 2.04 | 1.09 |
+| Cancer of prostate | Prostate cancer | 2.01 | 1.14 |
+| External causes | all 11 injury causes | 1.85 | 1.09 |
+| Cancer of large intestine | Colon and rectum cancers | 1.82 | 1.19 |
+| Dementia incl Alzheimer's | Alzheimer disease and other dementias | 1.64 | 1.11 |
+| Other neoplasms | 12 remaining cancer and neoplasm causes | 1.34 | 1.09 |
+
+**Decisions applied:**
+
+1. **Peripheral arterial disease:** WHO folds it into Other circulatory diseases, so the whole group takes 2.04 (the paper's PAD value was 4.80).
+2. **Age:** all-ages values from age 30 up, none below 30. The paper's own age data (Table S8) show the effect fading in older people, so the 70+ band is overstated.
+3. **Causes with no significant link** (non-Hodgkin lymphoma, leukaemia, ovary, breast, brain): no effect, as in the paper.
+4. **"Causes not listed" (1.80):** not applied, as in the paper.
+
+"Other neoplasms" (1.34) was added during the build. It was not in the table approved in chat, but the paper counts it as smoking-related.
+
+## Verification
+
+A Python mirror of the engine reproduces every target exactly and moves life expectancy in the expected direction. Nothing has been run in Godot.
+
+**Calibration per country:**
+
+| Country | Target e0 (years) | Years lived before 70 | Share reaching 70 | Years after 70, flat rate | Years after 70, calibrated |
+| --- | --- | --- | --- | --- | --- |
+| America | 78.5 | 66.18 | 0.776 | 20.04 | 15.87 |
+| China | 77.9 | 66.93 | 0.793 | 17.06 | 13.83 |
+| Germany | 81.0 | 67.80 | 0.834 | 17.16 | 15.81 |
+| Israel | 82.6 | 67.61 | 0.864 | 23.88 | 17.35 |
+| Russia | 72.4 | 63.32 | 0.642 | 15.96 | 14.15 |
+| UK | 80.7 | 67.53 | 0.835 | 18.31 | 15.77 |
+
+**Smoking response, USA, made-up test prevalences** (start: 50% never, 30% former, 20% current; not game data):
+
+| Scenario | Life expectancy (years) |
+| --- | --- |
+| Start | 78.50 |
+| Half the smokers quit | 79.94 |
+| Smoking doubles | 75.96 |
+| Nobody ever smoked | 83.73 |
+
+These responses are likely on the high side: the 70+ band uses all-ages RRs, and quitting pays off instantly.
+
+## Decisions
+
+Every choice follows the same rule: use real published data and never invent a number a source did not measure.
+
+| Decision | Chosen | Why |
+| --- | --- | --- |
+| How risk factors act | They scale cause-specific death rates per age band | Life expectancy is a function of age-specific mortality |
+| Which factors first | Smoking, diabetes, high blood pressure, physical inactivity, alcohol | Proximate factors; obesity left out because much of its effect runs through diabetes and blood pressure |
+| Double counting | Proximate factors only; income and education left out for now | Upstream factors act through the proximate ones; later they can shift exposures instead of death rates |
+| Exposure shape | 3-4 levels per factor, not yes/no | GBD models smoking, glucose, blood pressure and alcohol as continuous; a yes/no RR would be invented |
+| Source of death data | WHO Global Health Estimates | The GBD Results Tool requires a request form; WHO's file is open |
+| Age bands | WHO's 7 bands | Accepted; the open 70+ band is calibrated to the target |
+| Targets | WHO 2023 life expectancy for every country | One source and one year, matching the death data |
+| Smoking RRs | One cohort (Joshy 2025) instead of mixed studies | Consistent adjustment, current and former levels, 28 causes |
+| When it updates | Not decided | Instant on change vs. built up per round; depends on how much time a round represents |
+
+## Open items
+
+- [ ] Run the game in Godot: check the scene loads and each country's life expectancy equals its target
+- [ ] Smoking prevalence per country: never / former / current shares (WHO has current only)
+- [ ] Relative risks for blood pressure, diabetes, physical inactivity and alcohol, read from the original papers
+- [ ] Prevalence per level for those four factors, using the same cut-offs as their RRs
+- [ ] Decide how prevalence changes in play: instantly, or built up per round
+- [ ] Once prevalence can change: save it, and recalculate life expectancy on change
+- [ ] Consider age-specific smoking RRs (Table S8) so the effect fades with age
+- [ ] Copy `build_mortality.py` and `build_smoking.py` into the project so the data can be rebuilt
+- [ ] Update `docs/onboarding.md` with the Population and life expectancy changes
