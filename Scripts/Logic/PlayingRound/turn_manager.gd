@@ -1,21 +1,10 @@
 extends Node
 
-signal turn_change_requested(new_turn: int)
 signal turn_changed(new_turn)
 signal all_turns_completed
 
 var turn_order: Array = []
 var current_turn_index: int = -1
-
-func _ready():
-	pass
-	
-func add_player(country: Node):
-	var country_name = country.data.country_name
-
-	if not turn_order.has(country_name):
-		turn_order.append(country_name)
-	
 
 #region Turn Order
 func set_turn_order(new_order: Array):

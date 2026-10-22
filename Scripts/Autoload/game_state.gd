@@ -16,7 +16,7 @@ func _ready():
 
 func change_state(new_state: State):
 	if current_state == new_state:
-		pass
+		return
 	
 	current_state = new_state
 	state_changed.emit(new_state)
