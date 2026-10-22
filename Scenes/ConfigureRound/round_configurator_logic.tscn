@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://npx0iqhuoq01"]
+[gd_scene load_steps=8 format=3 uid="uid://npx0iqhuoq01"]
 
 [ext_resource type="Script" uid="uid://cge8x3l1wlgwv" path="res://Scripts/Logic/RoundConfigurator/round_configurator.gd" id="1_configurator"]
 [ext_resource type="Script" uid="uid://c0horaeynh6kp" path="res://Scripts/Logic/RoundConfigurator/create_players_manager.gd" id="2_dqtf1"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://ccwm60hvl6277" path="res://Scripts/Logic/RoundConfigurator/create_state_manager_step.gd" id="3_step"]
 [ext_resource type="Script" uid="uid://b7mp135tu8sn7" path="res://Scripts/Logic/RoundConfigurator/create_player_country_step.gd" id="4_step"]
 [ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/set_turn_order_step.gd" id="6_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/restore_saved_state_step.gd" id="7_step"]
 
 [node name="RoundConfigurator" type="Node"]
 script = ExtResource("1_configurator")
@@ -24,3 +25,6 @@ script = ExtResource("2_dqtf1")
 
 [node name="SetTurnOrder" type="Node" parent="."]
 script = ExtResource("6_step")
+
+[node name="RestoreSavedState" type="Node" parent="."]
+script = ExtResource("7_step")

@@ -33,6 +33,7 @@ func _on_state_changed(new_state):
 			create_round_config_panel()
 		main_menu_state.State.LOAD_GAME:
 			destroy_round_config_panel()
+			create_round_config_node()
 			create_load_panel()
 
 #region ROUND CONFIG
@@ -67,6 +68,7 @@ func create_load_panel():
 
 	load_panel_instance = load_panel.instantiate()
 	main_menu_ui.panels.add_child(load_panel_instance)
+	load_panel_instance.initialize(main_scene_logic.get_system("round_config"))
 
 func destroy_load_panel():
 	if load_panel_instance == null:

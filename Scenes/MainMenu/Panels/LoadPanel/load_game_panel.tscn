@@ -1,15 +1,23 @@
-[gd_scene load_steps=2 format=3 uid="uid://xdqeb1jx3ye2"]
+[gd_scene load_steps=6 format=3 uid="uid://xdqeb1jx3ye2"]
+
+[ext_resource type="Script" path="res://Scripts/UI/MainMenu/Panels/LoadPanel/load_game_panel.gd" id="1_panel"]
+[ext_resource type="Script" path="res://Scripts/Logic/MainMenu/LoadPanel/save_entry_factory.gd" id="2_factory"]
+[ext_resource type="Script" path="res://Scripts/Logic/MainMenu/LoadPanel/save_selector.gd" id="3_selector"]
+[ext_resource type="Script" path="res://Scripts/UI/MainMenu/Panels/LoadPanel/load_button.gd" id="4_button"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
 font_size = 32
 
 [node name="LoadPanel" type="Node"]
+script = ExtResource("1_panel")
 
 [node name="Logic" type="Node" parent="."]
 
-[node name="CountryEntryFactory" type="Node" parent="Logic"]
+[node name="SaveEntryFactory" type="Node" parent="Logic"]
+script = ExtResource("2_factory")
 
-[node name="CountrySelector" type="Node" parent="Logic"]
+[node name="SaveSelector" type="Node" parent="Logic"]
+script = ExtResource("3_selector")
 
 [node name="Panel" type="Panel" parent="."]
 offset_left = 176.0
@@ -41,7 +49,7 @@ offset_bottom = 480.0
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BeginButton" type="Button" parent="Panel"]
+[node name="LoadButton" type="Button" parent="Panel"]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 1.0
@@ -54,3 +62,6 @@ offset_bottom = 49.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "LOAD"
+script = ExtResource("4_button")
+
+[connection signal="entry_created" from="Logic/SaveEntryFactory" to="Logic/SaveSelector" method="track_entry"]

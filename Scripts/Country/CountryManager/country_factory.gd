@@ -22,12 +22,14 @@ func create_country(country_name):
 	country_list.add_child(new_country)
 	configure_country(new_country, country_name)
 	country_created.emit(new_country)
+	return new_country
 
 #region Country Configuration
 func configure_country(country, country_name):
 	var country_data = access_country_data(country_name)
 	var country_node_data = country.data
 
+	country_node_data.id = country_data["id"]
 	country_node_data.country_name = country_data["country_name"]
 	country_node_data.country_initiative = country_data["initiative"]
 

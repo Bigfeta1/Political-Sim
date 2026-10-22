@@ -4,12 +4,20 @@ func run(configurator):
 	var config = configurator.config
 	var country_factory = configurator.logic.get_system("country_manager").country_logic.country_factory
 
-	var opponent_count = config.player_count - 1
-	var opponent_ids = select_opponents(config, opponent_count)
+	var opponent_ids = select_saved_opponents(config) if not config.save_data.is_empty() else select_opponents(config, config.player_count - 1)
 
 	create_opponents(country_factory, opponent_ids)
 
 #region Selection
+func select_saved_opponents(config) -> Array:
+	var ids := []
+
+	for country in config.save_data["countries"]:
+		if not country["is_player"]:
+			ids.append(country["id"])
+
+	return ids
+
 func select_opponents(config, opponent_count: int) -> Array:
 	var candidates = get_candidate_ids(config)
 	candidates.shuffle()

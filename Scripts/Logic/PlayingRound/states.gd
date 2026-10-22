@@ -13,3 +13,9 @@ func set_round(new_round: int) -> void:
 
 func _on_phase_manager_cycle_completed() -> void:
 	set_round(current_round + 1)
+
+func get_save_data() -> Dictionary:
+	return {"current_round": current_round}
+
+func load_save_data(data: Dictionary) -> void:
+	current_round = int(data["current_round"])

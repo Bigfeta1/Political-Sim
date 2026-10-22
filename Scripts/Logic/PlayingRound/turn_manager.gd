@@ -60,3 +60,13 @@ func change_turn(new_turn: String):
 	turn_changed.emit(new_turn)
 	
 #endregion
+
+func get_save_data() -> Dictionary:
+	return {
+		"turn_order": turn_order,
+		"current_turn_index": current_turn_index,
+	}
+
+func load_save_data(data: Dictionary) -> void:
+	turn_order = data["turn_order"]
+	current_turn_index = int(data["current_turn_index"])

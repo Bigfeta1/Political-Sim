@@ -5,4 +5,5 @@ func run(configurator):
 	var turn_manager = configurator.logic.get_system("state_manager").turn_manager
 
 	country_factory.country_created.connect(turn_manager.add_player)
-	country_factory.create_country(configurator.config.player_country_id)
+	var player_country = country_factory.create_country(configurator.config.player_country_id)
+	player_country.data.is_player = true

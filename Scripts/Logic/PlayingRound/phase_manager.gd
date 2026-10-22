@@ -33,3 +33,10 @@ func advance_phase(new_phase: RoundPhase):
 	
 	current_phase = new_phase
 	phase_changed.emit(current_phase)
+
+func get_save_data() -> Dictionary:
+	return {"current_phase": current_phase}
+
+# Set directly: phase_changed would call start_turns and reset the turn index.
+func load_save_data(data: Dictionary) -> void:
+	current_phase = int(data["current_phase"])

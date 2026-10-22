@@ -5,4 +5,5 @@ extends Node
 @onready var state_router = $StateRouter
 
 func _ready():
+	SaveWriter.initialize(logic)
 	state_router.initialize(logic, ui)
