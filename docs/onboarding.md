@@ -2,9 +2,9 @@
 
 Politics is a 4X-style strategy game built in Godot 4.5 (Forward Plus). Today it runs from a main menu through country selection and round setup into a playing-round shell.
 
-- **Working now:** pick one of six countries (America, China, Germany, Israel, Russia, UK), press BEGIN, watch the round get assembled, and land in a playing round with an end-turn button, a phase label and a turn label.
-- **Stubbed:** the end-turn button does nothing yet, and `PhaseManager` names the phases (economic, proxy war, upkeep, standby) without any behaviour behind them.
-- **Focus so far:** the state progression from menu to round, built so each piece has one job and can be swapped or extended without touching the others.
+- **Working now:** pick one of six countries (America, China, Germany, Israel, Russia, UK), press BEGIN, and watch the round get assembled with two random opponents. You land in a playing round where END TURN steps through the countries in initiative order. After the last country the phase advances and the turns start over.
+- **Stubbed:** the phases (economic, proxy war, upkeep) have names and a cycle but no gameplay behind them, and nothing starts the first phase yet (see Known gaps).
+- **Focus so far:** the state progression from menu to round, and the turn and phase system, built so each piece has one job and can be swapped or extended without touching the others.
 
 ## Project layout
 
@@ -12,7 +12,7 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 
 | Path | What lives there |
 | --- | --- |
-| `Data/Country_Data/` | One JSON file per country, with `id` and `country_name`. Adding a file adds a country to the selection list. |
+| `Data/Country_Data/` | One JSON file per country, with `id`, `country_name` and `initiative` (1 to 5). Adding a file adds a country to the selection list. |
 | `Scenes/main_scene.tscn` | The entry scene (`run/main_scene`): `StateRouter`, `Logic`, `UI`. |
 | `Scenes/MainMenu/` | `Core/` holds the menu logic and UI scenes. `Panels/` holds the round config panel and its country entry. |
 | `Scenes/ConfigureRound/` | Everything that exists while a round is assembled: the round config node, the round configurator (logic and UI), the country manager, the state manager. |
@@ -115,7 +115,7 @@ A rebuilt panel gets a new selector, so `has_selection` always starts false.
 
 ## Round configurator
 
-The round configurator runs a list of steps in order, builds the systems a round needs, creates the player's country, and then hands the game to the playing round. It exists only during `CONFIGURE_ROUND`.
+The round configurator runs a list of steps in order, builds the systems a round needs, creates the player's country and the opponents, sets the turn order, and then hands the game to the playing round. It exists only during `CONFIGURE_ROUND`.
 
 **Structure.** `round_configurator_logic.tscn` is a `RoundConfigurator` node whose children are the steps. Scene-tree order is execution order. Each step is a node with a script that has one function, `run(configurator)`. The configurator exposes `logic` (its parent, the registry) and `config` (the registered `round_config` node), so a step reaches everything through the configurator.
 
@@ -124,6 +124,8 @@ The round configurator runs a list of steps in order, builds the systems a round
 | 1 | `CreateCountryManager` | `create_country_manager_step.gd` | Instantiates the country manager under `Logic`, registers it as `country_manager`, and calls its `initialize()`. |
 | 2 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates the state manager (with `TurnManager` and `PhaseManager`) under `Logic` and registers it as `state_manager`. |
 | 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Connects the factory's `country_created` signal to `TurnManager.add_player`, then creates the country whose id is `config.player_country_id`. |
+| 4 | `CreatePlayers` | `create_players_manager.gd` | Picks `config.player_count - 1` random countries (never the player's) and creates them through the factory, so they register with the turn manager. `player_count` is 3 and is not yet editable in the panel. |
+| 5 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
 
 **How it runs.**
 
@@ -140,8 +142,31 @@ The playing round does not own its systems. It is a thin scene that receives the
 
 - **Logic (`playing_round_logic.tscn`).** A `PlayingRound` node with an `EventCoordinators` child that holds `GameInitializer`. The router calls `initialize(country_manager)`, which passes the manager down to the initializer. `GameInitializer` only stores it so far.
 - **Systems.** The country manager and state manager were created and registered during configure. The router reads `state_manager` from the registry and takes `turn_manager` and `phase_manager` from it.
-- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager)`. `PhaseLabel` shows the current `RoundPhase` name and updates on `phase_changed`. `TurnLabel` shows the current country's name on `turn_changed`. The end-turn button holds the state manager and has no behaviour yet.
+- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager)`. `PhaseLabel` and `TurnLabel` each draw their current value on initialize and update on `phase_changed` and `turn_changed`. `TurnLabel` reads the current country from `TurnManager.get_current_turn()` and shows "STANDBY" when there is none. The end-turn button (`Buttons/EndTurnButton`) holds the state manager and calls `state_manager.turn_manager.next_turn()`.
 - **Teardown.** The router frees the UI on `MAIN_MENU`. `logic.clear()` frees the playing round logic, the country manager and the state manager together.
+
+## Turn and phase system
+
+`state_manager.tscn` holds `TurnManager` and `PhaseManager`, and its root script (`states.gd`) keeps the round counter. The managers never reference each other. Three `[connection]` entries in the scene link them:
+
+| Signal | From | To |
+| --- | --- | --- |
+| `all_turns_completed` | `TurnManager` | `PhaseManager.next_phase` |
+| `phase_changed` | `PhaseManager` | `TurnManager.start_turns` (`unbinds=1`, since `start_turns` takes no argument) |
+| `cycle_completed` | `PhaseManager` | `StateManager._on_phase_manager_cycle_completed`, which adds 1 to `current_round` |
+
+- **`TurnManager`** holds `turn_order` (country names) and `current_turn_index`. `set_turn_order()` replaces the order. `start_turns()` resets the index to -1 and selects the first country. `next_turn()` moves to the next country. Past the last one it resets the index to -1, emits `all_turns_completed` and does not emit `turn_changed`. `get_current_turn()` returns the current name, or `null`.
+- **`PhaseManager`** builds its cycle from the `RoundPhase` enum with `STANDBY` filtered out, so the enum is the only list of phases. `next_phase()` goes to the next phase and emits `cycle_completed` first when `UPKEEP_PHASE` wraps to `ECONOMIC_PHASE`. Leaving `STANDBY` does not emit it.
+- **`StateManager`** holds `current_round` (starts at 0), `set_round(n)` and the `round_changed(new_round)` signal.
+
+One END TURN press, in order:
+
+1. The button calls `next_turn()`.
+2. After the last country, `all_turns_completed` fires and `next_phase()` advances the phase.
+3. `phase_changed` calls `start_turns()`, so the first country is up in the new phase.
+4. After `UPKEEP_PHASE`, `cycle_completed` fires and the round counter goes up.
+
+The turn order is computed once, during `SetTurnOrder`. It does not change between phases.
 
 ## How to extend
 
@@ -170,16 +195,20 @@ The playing round does not own its systems. It is a thin scene that receives the
 
 **Add a country**
 
-- Drop a JSON file with `id` and `country_name` into `Data/Country_Data/`. It appears in the selection list the next time the panel opens.
+- Drop a JSON file with `id`, `country_name` and `initiative` into `Data/Country_Data/`. The factory reads `initiative` unconditionally, so a file without it errors. It appears in the selection list the next time the panel opens.
 
 ## Known gaps and next steps
 
 The round setup flow is complete end to end in code, but several parts are placeholders. Items marked "from reading the code" have not been confirmed by running the game.
 
 - **No way back to the main menu.** The router's `MAIN_MENU` branch (clear `Logic`, rebuild the menu) exists, but no code requests that state after startup.
-- **Steps finish instantly.** All three configurator steps are synchronous, so the whole configure state runs in one frame and the checklist UI is replaced before it can be seen. It becomes visible once a step awaits something.
+- **Steps finish instantly.** All the configurator steps are synchronous, so the whole configure state runs in one frame and the checklist UI is replaced before it can be seen. It becomes visible once a step awaits something.
 - **Round config creation lives in the router.** The router creates the round config node and panel when the menu enters `GAME_SETUP`. The intended owner is the main menu itself.
 - **Same-state guards do nothing.** In `GameState.change_state` and `PhaseManager.advance_phase`, the `if current == new: pass` check does not return, so a repeated request still emits.
-- **Turn label starts empty (from reading the code).** `TurnLabel` only draws on `turn_changed`, and the first turn change fires during the configure state, before the playing round UI exists. `PhaseLabel`, by contrast, draws its current value on initialize.
-- **Stubs.** `GameInitializer` stores the country manager and does nothing; the end-turn button has an empty `_pressed()`; the phases have names but no behaviour.
+- **No first phase.** Nothing moves `PhaseManager` off `STANDBY`. Planned: a final configurator step that calls `next_phase()` and `set_round(1)`, and replaces the `next_turn()` call in `SetTurnOrder`. Until then the phase becomes `ECONOMIC_PHASE` only after the first full pass of END TURN, and `current_round` stays 0 until the first full cycle completes.
+- **Fixed turn order.** Initiative is read once at setup. Re-sorting each phase means moving the sort out of `SetTurnOrder` into runtime code that can see the country nodes.
+- **Player count is fixed.** `RoundConfig.player_count` is 3. The panel does not expose it, and opponents are always random, with no per-opponent choice.
+- **Step script name.** The `CreatePlayers` node still uses `create_players_manager.gd`, so the node and file names differ.
+- **Nothing listens to `round_changed`.** There is no round label yet.
+- **Stubs.** `GameInitializer` stores the country manager and does nothing; the phases have names and a cycle but no behaviour.
 - **Open editor error.** The editor reports `Could not resolve script "res://Scripts/Logic/round_config.gd"` at line 7 of `country_factory.gd`. The file exists at that path and the cause has not been found.
