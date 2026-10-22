@@ -29,6 +29,7 @@ func configure_country(country, country_name):
 	var country_node_data = country.data
 
 	country_node_data.country_name = country_data["country_name"]
+	country_node_data.country_initiative = country_data["initiative"]
 
 func access_country_data(country_name):
 	for file_path in countries:

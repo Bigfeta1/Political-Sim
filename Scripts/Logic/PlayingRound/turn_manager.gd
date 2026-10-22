@@ -15,10 +15,12 @@ func add_player(country: Node):
 	if not turn_order.has(country_name):
 		turn_order.append(country_name)
 	
-	next_turn()
-	print(current_turn_index)
 
 #region Turn Order
+func set_turn_order(new_order: Array):
+	turn_order = new_order
+	current_turn_index = -1
+
 func next_turn():
 	if turn_order.is_empty():
 		return

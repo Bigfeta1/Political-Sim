@@ -4,6 +4,7 @@ const COUNTRY_DIR = "res://Data/Country_Data/"
 
 var country_files := []
 var player_country_id := ""
+var player_count := 3
 
 func _ready() -> void:
 	country_files = find_country_files()

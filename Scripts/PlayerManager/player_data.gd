@@ -1,6 +1,7 @@
 extends Node
 
 var country_name
+var country_initiative
 var country_population
 var country_money
 var country_public_image
