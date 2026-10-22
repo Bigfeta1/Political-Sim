@@ -3,7 +3,8 @@ extends Node
 enum State {
 	INTRO_SCREEN,
 	SETTINGS,
-	GAME_SETUP
+	GAME_SETUP,
+	LOAD_GAME
 }
 
 var current_state: State = State.INTRO_SCREEN

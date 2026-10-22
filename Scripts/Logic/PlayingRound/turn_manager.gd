@@ -12,7 +12,7 @@ func _ready():
 	
 func add_player(country: Node):
 	var country_name = country.data.country_name
-	
+
 	if not turn_order.has(country_name):
 		turn_order.append(country_name)
 	

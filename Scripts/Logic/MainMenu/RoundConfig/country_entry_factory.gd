@@ -2,7 +2,7 @@ extends Node
 
 signal entry_created(entry: Node)
 
-var country_entry = preload("res://Scenes/MainMenu/Panels/round_config_country_container.tscn")
+var country_entry = preload("res://Scenes/MainMenu/Panels/RoundConfig/round_config_country_container.tscn")
 
 func initialize(config, country_list):
 	var country_group = ButtonGroup.new()

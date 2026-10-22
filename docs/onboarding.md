@@ -71,10 +71,10 @@ flowchart TD
 	C["PLAYING_ROUND<br/>Free the configurator and its UI<br/>Create the playing round logic<br/>Create the playing round UI"]
 	A -->|"BEGIN pressed, once a country is selected"| B
 	B -->|"Configurator finishes its last step (all_completed)"| C
-	C -.->|"Return to main menu: no code requests it yet"| A
+	C -->|"Alt pressed (InputHandler)"| A
 ```
 
-Only two things request a state change today: the BEGIN button asks for `CONFIGURE_ROUND`, and the configurator asks for `PLAYING_ROUND` when its last step is done. `GameState` is global; `MainMenuState` lives inside the menu scene and only changes which panel shows.
+Three things request a state change today: the BEGIN button asks for `CONFIGURE_ROUND`, the configurator asks for `PLAYING_ROUND` when its last step is done, and the playing round's `InputHandler` (`playing_round_input.gd`, under `Logic` in `playing_round_logic.tscn`) asks for `MAIN_MENU` when Alt is pressed. `GameState` is global; `MainMenuState` lives inside the menu scene and only changes which panel shows.
 
 What happens, in order:
 
@@ -201,7 +201,8 @@ The turn order is computed once, during `SetTurnOrder`. It does not change betwe
 
 The round setup flow is complete end to end in code, but several parts are placeholders. Items marked "from reading the code" have not been confirmed by running the game.
 
-- **No way back to the main menu.** The router's `MAIN_MENU` branch (clear `Logic`, rebuild the menu) exists, but no code requests that state after startup.
+- **Return to menu is Alt only.** The router's `MAIN_MENU` branch clears `Logic`, rebuilds the menu and frees the playing round UI. Alt is the only trigger, and it is the raw key (the project has no input action for it), so there is no on-screen way back. A second game after returning was checked in a run, with END TURN stepping through the countries.
+- **Phase advance is untested.** END TURN past the last country (phase change, `start_turns`, round counter) has not been run yet.
 - **Steps finish instantly.** All the configurator steps are synchronous, so the whole configure state runs in one frame and the checklist UI is replaced before it can be seen. It becomes visible once a step awaits something.
 - **Round config creation lives in the router.** The router creates the round config node and panel when the menu enters `GAME_SETUP`. The intended owner is the main menu itself.
 - **Same-state guards do nothing.** In `GameState.change_state` and `PhaseManager.advance_phase`, the `if current == new: pass` check does not return, so a repeated request still emits.

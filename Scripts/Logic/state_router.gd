@@ -1,18 +1,11 @@
 extends Node
 
-const MainMenuState = preload("res://Scripts/Logic/MainMenu/main_menu_state.gd")
-
 var logic
 var main_menu_logic = preload("res://Scenes/MainMenu/Core/main_menu_logic.tscn")
 
 var ui
 var main_menu_ui_instance: Node = null
 var main_menu_ui = preload("res://Scenes/MainMenu/Core/main_menu_ui.tscn")
-
-var round_config_panel_instance = null
-var round_config_panel = preload("res://Scenes/MainMenu/Panels/round_config_panel.tscn")
-
-var round_config_node = preload("res://Scenes/ConfigureRound/round_config.tscn")
 
 #RoundConfigurator
 var round_configurator = preload("res://Scenes/ConfigureRound/round_configurator_logic.tscn")
@@ -70,8 +63,8 @@ func create_main_menu():
 	main_menu_ui_instance = main_menu_ui.instantiate()
 	ui.add_child(main_menu_ui_instance)
 
+	menu.initialize(main_menu_ui_instance, logic)
 	main_menu_ui_instance.initialize(menu)
-	menu.menu_state.state_changed.connect(_on_menu_state_changed)
 
 func destroy_main_menu():
 	if main_menu_ui_instance == null:
@@ -81,41 +74,6 @@ func destroy_main_menu():
 	main_menu_ui_instance = null
 
 	logic.release("main_menu")
-
-	round_config_panel_instance = null
-
-func _on_menu_state_changed(new_state):
-	match new_state:
-		MainMenuState.State.INTRO_SCREEN:
-			destroy_round_config_panel()
-		MainMenuState.State.SETTINGS:
-			destroy_round_config_panel()
-		MainMenuState.State.GAME_SETUP:
-			create_round_config_node()
-			create_round_config_panel()
-
-func create_round_config_panel():
-	if round_config_panel_instance != null:
-		return
-
-	round_config_panel_instance = round_config_panel.instantiate()
-	main_menu_ui_instance.panels.add_child(round_config_panel_instance)
-	round_config_panel_instance.initialize(logic.get_system("round_config"))
-
-func create_round_config_node():
-	if logic.get_system("round_config") != null:
-		return
-
-	var config = round_config_node.instantiate()
-	logic.add_child(config)
-	logic.register("round_config", config)
-
-func destroy_round_config_panel():
-	if round_config_panel_instance == null:
-		return
-
-	round_config_panel_instance.queue_free()
-	round_config_panel_instance = null
 
 #endregion
 
