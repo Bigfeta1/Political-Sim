@@ -2,8 +2,17 @@
   "id": "russia",
   "country_name": "Russia",
   "initiative": 5,
-  "life_expectancy": 70,
+  "life_expectancy": 72.4,
   "money": 4386,
   "public_image": 5,
-  "population": 143669648
+  "population": 143669648,
+  "risk_prevalence": {},
+  "workers": {
+    "physician": 0,
+    "lawyer": 0,
+    "engineer": 0,
+    "programmer": 0,
+    "administrative": 0,
+    "construction": 0
+  }
 } 

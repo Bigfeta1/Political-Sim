@@ -2,8 +2,17 @@
   "id": "israel",
   "country_name": "Israel",
   "initiative": 4,
-  "life_expectancy": 82,
+  "life_expectancy": 82.6,
   "money": 1368,
   "public_image": 5,
-  "population": 10002200
+  "population": 10002200,
+  "risk_prevalence": {},
+  "workers": {
+    "physician": 0,
+    "lawyer": 0,
+    "engineer": 0,
+    "programmer": 0,
+    "administrative": 0,
+    "construction": 0
+  }
 } 

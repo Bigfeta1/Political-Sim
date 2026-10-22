@@ -2,8 +2,17 @@
   "id": "america",
   "country_name": "America",
   "initiative": 3,
-  "life_expectancy": 78.4,
+  "life_expectancy": 78.5,
   "money": 139866,
   "public_image": 5,
-  "population": 340003797
+  "population": 340003797,
+  "risk_prevalence": {},
+  "workers": {
+	"physician": 0,
+	"lawyer": 0,
+	"engineer": 0,
+	"programmer": 0,
+	"administrative": 0,
+	"construction": 0
+  }
 } 

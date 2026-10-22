@@ -59,7 +59,7 @@ format = 0
 layout_mode = 2
 script = ExtResource("6_parameter_label")
 symbol = "♥"
-parameter = "Population"
+parameter = "Population/LifeExpectancy"
 value = "life_expectancy"
 format = 1
 
@@ -67,7 +67,7 @@ format = 1
 layout_mode = 2
 script = ExtResource("6_parameter_label")
 symbol = "☻"
-parameter = "Population"
+parameter = "Population/Count"
 value = "population"
 format = 3
 

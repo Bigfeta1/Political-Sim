@@ -2,7 +2,7 @@ extends Node
 
 const SAVE_DIR = "user://saves/"
 const SAVE_PATH = SAVE_DIR + "save.json"
-const SAVE_VERSION = 3
+const SAVE_VERSION = 5
 
 var logic
 

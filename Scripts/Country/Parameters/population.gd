@@ -1,24 +1,14 @@
 extends Node
 
-signal population_changed(new_population)
-signal life_expectancy_changed(new_life_expectancy)
-
-var population:
-	set(value):
-		population = value
-		population_changed.emit(value)
-
-var life_expectancy:
-	set(value):
-		life_expectancy = value
-		life_expectancy_changed.emit(value)
-
+# Every child with save functions is included, the same way country.gd handles Parameters.
 func get_save_data() -> Dictionary:
-	return {
-		"population": population,
-		"life_expectancy": life_expectancy,
-	}
+	var save_data := {}
+	for child in get_children():
+		if child.has_method("get_save_data"):
+			save_data.merge(child.get_save_data())
+	return save_data
 
 func load_save_data(data: Dictionary) -> void:
-	population = data["population"]
-	life_expectancy = data["life_expectancy"]
+	for child in get_children():
+		if child.has_method("load_save_data"):
+			child.load_save_data(data)

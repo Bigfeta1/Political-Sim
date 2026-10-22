@@ -2,8 +2,17 @@
   "id": "uk",
   "country_name": "United Kingdom",
   "initiative": 2,
-  "life_expectancy": 81,
+  "life_expectancy": 80.7,
   "money": 15972,
   "public_image": 5,
-  "population": 69281000
+  "population": 69281000,
+  "risk_prevalence": {},
+  "workers": {
+    "physician": 0,
+    "lawyer": 0,
+    "engineer": 0,
+    "programmer": 0,
+    "administrative": 0,
+    "construction": 0
+  }
 } 

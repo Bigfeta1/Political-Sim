@@ -2,8 +2,17 @@
   "id": "germany",
   "country_name": "Germany",
   "initiative": 2,
-  "life_expectancy": 80.9,
+  "life_expectancy": 81.0,
   "money": 17426,
   "public_image": 5,
-  "population": 83516593
+  "population": 83516593,
+  "risk_prevalence": {},
+  "workers": {
+    "physician": 0,
+    "lawyer": 0,
+    "engineer": 0,
+    "programmer": 0,
+    "administrative": 0,
+    "construction": 0
+  }
 } 

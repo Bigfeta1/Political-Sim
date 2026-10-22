@@ -5,20 +5,45 @@ var is_player := false
 var country_name
 var country_initiative
 
-var population_node
+var population_count_node
+var life_expectancy_node
+var workers_node
 
-# Population and life expectancy live on Parameters/Population; these read and write through to it.
+# Population, life expectancy and workers live on the children of Parameters/Population; these read and write through to them.
 var country_population:
 	get:
-		return population_node.population
+		return population_count_node.population
 	set(value):
-		population_node.population = value
+		population_count_node.population = value
 
+# Life expectancy is calculated from the mortality data, so it can only be read.
 var country_life_expectancy:
 	get:
-		return population_node.life_expectancy
+		return life_expectancy_node.life_expectancy
+
+var country_target_life_expectancy:
+	get:
+		return life_expectancy_node.target_life_expectancy
 	set(value):
-		population_node.life_expectancy = value
+		life_expectancy_node.target_life_expectancy = value
+
+var country_mortality:
+	get:
+		return life_expectancy_node.mortality
+	set(value):
+		life_expectancy_node.mortality = value
+
+var country_risk_prevalence:
+	get:
+		return life_expectancy_node.risk_prevalence
+	set(value):
+		life_expectancy_node.risk_prevalence = value
+
+var country_workers:
+	get:
+		return workers_node.workers
+	set(value):
+		workers_node.workers = value
 
 var economy_node
 
@@ -40,6 +65,8 @@ var country_public_image:
 
 
 func initialize(parameters):
-	population_node = parameters.get_node("Population")
+	population_count_node = parameters.get_node("Population/Count")
+	life_expectancy_node = parameters.get_node("Population/LifeExpectancy")
+	workers_node = parameters.get_node("Population/Workers")
 	economy_node = parameters.get_node("Economy")
 	public_image_node = parameters.get_node("PublicImage")

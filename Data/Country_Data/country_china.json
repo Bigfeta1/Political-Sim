@@ -2,8 +2,17 @@
   "id": "china",
   "country_name": "China",
   "initiative": 5,
-  "life_expectancy": 78,
+  "life_expectancy": 77.9,
   "money": 84485,
   "public_image": 5,
-  "population": 1408975000
+  "population": 1408975000,
+  "risk_prevalence": {},
+  "workers": {
+    "physician": 0,
+    "lawyer": 0,
+    "engineer": 0,
+    "programmer": 0,
+    "administrative": 0,
+    "construction": 0
+  }
 } 

@@ -1,10 +1,15 @@
-[gd_scene load_steps=6 format=3 uid="uid://c4esnvpnxt7wi"]
+[gd_scene load_steps=11 format=3 uid="uid://c4esnvpnxt7wi"]
 
 [ext_resource type="Script" uid="uid://cjypsqgufhc26" path="res://Scripts/Country/Countries/country.gd" id="1_4gy0w"]
 [ext_resource type="Script" uid="uid://bwpp71k1hkxel" path="res://Scripts/PlayerManager/player_data.gd" id="2_ftrsc"]
 [ext_resource type="Script" uid="uid://bq4mkue4yi245" path="res://Scripts/Country/Parameters/population.gd" id="3_population"]
 [ext_resource type="Script" uid="uid://btewjius7p42s" path="res://Scripts/Country/Parameters/economy.gd" id="4_economy"]
 [ext_resource type="Script" uid="uid://cbe32r06rh68j" path="res://Scripts/Country/Parameters/public_image.gd" id="5_public_image"]
+[ext_resource type="Script" path="res://Scripts/Country/Parameters/Population/population_count.gd" id="6_population_count"]
+[ext_resource type="Script" path="res://Scripts/Country/Parameters/Population/life_expectancy.gd" id="7_life_expectancy"]
+[ext_resource type="Script" path="res://Scripts/Country/Parameters/Population/workers.gd" id="8_workers"]
+[ext_resource type="Script" path="res://Scripts/Country/Parameters/Population/age_band.gd" id="9_age_band"]
+[ext_resource type="Script" path="res://Scripts/Country/Parameters/Population/risk_factor.gd" id="10_risk_factor"]
 
 [node name="Country" type="Node"]
 script = ExtResource("1_4gy0w")
@@ -18,6 +23,65 @@ script = ExtResource("2_ftrsc")
 
 [node name="Population" type="Node" parent="Parameters"]
 script = ExtResource("3_population")
+
+[node name="Count" type="Node" parent="Parameters/Population"]
+script = ExtResource("6_population_count")
+
+[node name="LifeExpectancy" type="Node" parent="Parameters/Population"]
+script = ExtResource("7_life_expectancy")
+
+[node name="AgeBands" type="Node" parent="Parameters/Population/LifeExpectancy"]
+
+[node name="Age0To4" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "0-4"
+start_age = 0
+width = 5
+
+[node name="Age5To14" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "5-14"
+start_age = 5
+width = 10
+
+[node name="Age15To29" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "15-29"
+start_age = 15
+width = 15
+
+[node name="Age30To49" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "30-49"
+start_age = 30
+width = 20
+
+[node name="Age50To59" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "50-59"
+start_age = 50
+width = 10
+
+[node name="Age60To69" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "60-69"
+start_age = 60
+width = 10
+
+[node name="Age70Plus" type="Node" parent="Parameters/Population/LifeExpectancy/AgeBands"]
+script = ExtResource("9_age_band")
+key = "70+"
+start_age = 70
+width = 0
+
+[node name="RiskFactors" type="Node" parent="Parameters/Population/LifeExpectancy"]
+
+[node name="Smoking" type="Node" parent="Parameters/Population/LifeExpectancy/RiskFactors"]
+script = ExtResource("10_risk_factor")
+key = "smoking"
+
+[node name="Workers" type="Node" parent="Parameters/Population"]
+script = ExtResource("8_workers")
 
 [node name="Economy" type="Node" parent="Parameters"]
 script = ExtResource("4_economy")
