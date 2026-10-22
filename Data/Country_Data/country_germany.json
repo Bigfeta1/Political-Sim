@@ -1,5 +1,8 @@
 {
   "id": "germany",
   "country_name": "Germany",
-  "initiative": 2
+  "initiative": 2,
+  "life_expectancy": 80.9,
+  "money": 17426,
+  "public_image": 5
 } 

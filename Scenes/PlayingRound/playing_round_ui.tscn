@@ -1,9 +1,13 @@
-[gd_scene load_steps=5 format=3 uid="uid://c7tujkmu1pocv"]
+[gd_scene load_steps=9 format=3 uid="uid://c7tujkmu1pocv"]
 
 [ext_resource type="Script" uid="uid://bqsf2fx4s5bqj" path="res://Scripts/UI/PlayingRound/playing_round_ui.gd" id="1_ijrtg"]
 [ext_resource type="Script" uid="uid://4woou4sj0h05" path="res://Scripts/UI/PlayingRound/end_turn_button.gd" id="2_r6u7c"]
 [ext_resource type="Script" uid="uid://cj4qc8b1l42iw" path="res://Scripts/UI/PlayingRound/phase_label.gd" id="3_yyxya"]
 [ext_resource type="Script" uid="uid://dgvmxk7g8vrnj" path="res://Scripts/UI/PlayingRound/turn_label.gd" id="4_xpa3x"]
+[ext_resource type="Script" uid="uid://baell6beh14va" path="res://Scripts/UI/PlayingRound/TopBar/top_bar.gd" id="5_topbar"]
+[ext_resource type="Script" uid="uid://dvdhxw2o38a77" path="res://Scripts/UI/PlayingRound/TopBar/money_label.gd" id="6_money"]
+[ext_resource type="Script" uid="uid://bvf86w6bxwiik" path="res://Scripts/UI/PlayingRound/TopBar/public_image_label.gd" id="7_image"]
+[ext_resource type="Script" uid="uid://cgj5t8qbmq3fy" path="res://Scripts/UI/PlayingRound/TopBar/life_expectancy_label.gd" id="8_life"]
 
 [node name="PlayingRound" type="Control"]
 layout_mode = 3
@@ -13,6 +17,41 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_ijrtg")
+
+[node name="TopBar" type="Control" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 0.07
+grow_horizontal = 2
+script = ExtResource("5_topbar")
+
+[node name="Panel" type="Panel" parent="TopBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TopBar"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 2.0
+offset_right = 50.0
+offset_bottom = 42.0
+theme_override_constants/separation = 54
+
+[node name="MoneyLabel" type="Label" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+script = ExtResource("6_money")
+
+[node name="PublicImageLabel" type="Label" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+script = ExtResource("7_image")
+
+[node name="LifeExpectancyLabel" type="Label" parent="TopBar/HBoxContainer"]
+layout_mode = 2
+script = ExtResource("8_life")
 
 [node name="Buttons" type="Control" parent="."]
 layout_mode = 1
@@ -35,15 +74,15 @@ script = ExtResource("2_r6u7c")
 [node name="PhaseLabel" type="Label" parent="."]
 layout_mode = 0
 offset_left = 759.0
-offset_top = 16.0
+offset_top = 62.0
 offset_right = 799.0
-offset_bottom = 39.0
+offset_bottom = 85.0
 script = ExtResource("3_yyxya")
 
 [node name="TurnLabel" type="Label" parent="."]
 layout_mode = 0
 offset_left = 761.0
-offset_top = 51.0
+offset_top = 97.0
 offset_right = 801.0
-offset_bottom = 74.0
+offset_bottom = 120.0
 script = ExtResource("4_xpa3x")

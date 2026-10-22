@@ -26,4 +26,7 @@ func configure_country(country, country_name):
 	country_node_data.id = country_data["id"]
 	country_node_data.country_name = country_data["country_name"]
 	country_node_data.country_initiative = country_data["initiative"]
+	country_node_data.country_money = country_data["money"]
+	country_node_data.country_public_image = country_data["public_image"]
+	country_node_data.country_life_expectancy = country_data["life_expectancy"]
 #endregion

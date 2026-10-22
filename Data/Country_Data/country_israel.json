@@ -1,5 +1,8 @@
 {
   "id": "israel",
   "country_name": "Israel",
-  "initiative": 4
+  "initiative": 4,
+  "life_expectancy": 82,
+  "money": 1368,
+  "public_image": 5
 } 
