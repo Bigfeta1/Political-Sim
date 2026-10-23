@@ -6,6 +6,11 @@ enum MapSize {
 	SMALL,
 }
 
+enum MapType {
+	RANDOM,
+	EARTH,
+}
+
 const MAP_DIMENSIONS = {
 	MapSize.SMALL: Vector2i(74, 46),
 }
@@ -15,6 +20,7 @@ var player_country_id := ""
 var player_count := 3
 var save_data := {}
 var map_size := MapSize.SMALL
+var map_type := MapType.EARTH
 
 func _ready() -> void:
 	country_files = CountryFiles.find_paths()

@@ -8,9 +8,11 @@ extends Node
 @onready var workers = $Workers
 
 func _ready() -> void:
-	count.initialize(age_bands)
 	mortality.initialize(age_bands, risk_factors)
 	life_expectancy.initialize(age_bands, mortality)
+
+func initialize(settlements):
+	count.initialize(age_bands, settlements)
 
 func get_save_data() -> Dictionary:
 	var save_data := {}

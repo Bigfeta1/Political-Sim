@@ -15,27 +15,27 @@ Each job has its own child of `Population` in `country.tscn`. `population.gd` wi
 
 ```
 Population             population.gd: wires its children, merges their save data
-├─ Count               population_count.gd: population_count = sum of the bands, population_count_changed
+├─ Count               population_count.gd: fills each band's population from the cities, population_count, population_count_changed
 ├─ AgeBands
 │  ├─ Age0To4          age_band.gd: key "0-4" gives start_age 0, width 5
 │  ├─ Age5To14 … Age60To69
 │  └─ Age70Plus        key "70+" gives width 0 = the open-ended last band
 ├─ RiskFactors
 │  └─ Smoking          risk_factor.gd: key "smoking"
-├─ Mortality           mortality.gd: fills the bands, death rate per band, mortality_changed
+├─ Mortality           mortality.gd: death rate per band, mortality_changed
 ├─ LifeExpectancy      life_expectancy.gd: life table, 70+ calibration, life_expectancy_changed
 └─ Workers             workers.gd: head count per role
 ```
 
-Two `[connection]` entries in `country.tscn` route `Mortality.mortality_changed` to `LifeExpectancy._on_mortality_changed`, which runs `calibrate()` and then `calculate()` (each calls `life_table()` once), and to `Count._on_mortality_changed`, which adds up the bands' populations. The bands are the country's only population figure.
+A `[connection]` in `country.tscn` routes `Mortality.mortality_changed` to `LifeExpectancy._on_mortality_changed`, which runs `calibrate()` and then `calculate()` (each calls `life_table()` once). Another routes the city's `band_populations_changed` (`Settlements/City/Population`) to `Count._on_band_populations_changed`. The people live in the cities (see Settlements in `docs/onboarding.md`); each band's `population` is their total, filled by `Count`. Life expectancy never reads it.
 
 | Script | Job |
 | --- | --- |
-| `Scripts/Country/Parameters/population.gd` | Calls `count.initialize(age_bands)`, `mortality.initialize(age_bands, risk_factors)` and `life_expectancy.initialize(age_bands, mortality)`. |
-| `Scripts/Country/Parameters/Population/population_count.gd` | `count_bands()` sums the bands' populations and stores the total with `set_population_count()`, which emits `population_count_changed`. It runs on `mortality_changed` and after loading. Saves each band's population under `population`, keyed by band, and writes them back on load. |
-| `Scripts/Country/Parameters/Population/mortality.gd` | Holds `mortality` and `risk_prevalence`. `set_mortality()` fills each band's population and turns each cause's WHO deaths into a rate (deaths ÷ the band's WHO population), then emits `mortality_changed`. `set_risk_prevalence()` hands each factor its start and current shares. `death_rate(band)` adds up each cause's rate times every factor's multiplier. It never divides by the band's current population. |
+| `Scripts/Country/Parameters/population.gd` | Calls `mortality.initialize(age_bands, risk_factors)` and `life_expectancy.initialize(age_bands, mortality)` in `_ready()`, and `count.initialize(age_bands, settlements)` in `initialize(settlements)`, which `country.gd` calls. |
+| `Scripts/Country/Parameters/Population/population_count.gd` | `count_bands()` sets each band's `population` to `settlements.band_population(key)`, sums them and stores the total with `set_population_count()`, which emits `population_count_changed`. It runs whenever a city's band populations change, including on load. Saves nothing; the cities save the population. |
+| `Scripts/Country/Parameters/Population/mortality.gd` | Holds `mortality` and `risk_prevalence`. `set_mortality()` turns each cause's WHO deaths into a rate (deaths ÷ the band's WHO population), then emits `mortality_changed`. `set_risk_prevalence()` hands each factor its start and current shares. `death_rate(band)` adds up each cause's rate times every factor's multiplier. It never divides by the band's current population. |
 | `Scripts/Country/Parameters/Population/life_expectancy.gd` | Holds `target_life_expectancy` and `life_expectancy`. Asks `Mortality` for each band's death rate. `set_life_expectancy()` emits `life_expectancy_changed`. |
-| `Scripts/Country/Parameters/Population/age_band.gd` | Data only: `key`, plus `start_age` and `width` read from it in `_ready()`, plus the band's population and its death rate per WHO cause. |
+| `Scripts/Country/Parameters/Population/age_band.gd` | Data only: `key`, plus `start_age` and `width` read from it in `_ready()`, plus the band's population (the cities' total, set by `Count`) and its death rate per WHO cause. |
 | `Scripts/Country/Parameters/Population/risk_factor.gd` | Reads its RR file in `_ready()`. `multiplier(cause, band)` returns 1 when it has no prevalence or the band starts below `min_age`. |
 | `Scripts/Data/mortality_files.gd` | `find_by_id(id)` reads `Data/Mortality/mortality_<id>.json`. |
 | `Scripts/Data/risk_factor_files.gd` | `read(key)` reads `Data/RiskFactors/<key>.json`. |
@@ -44,7 +44,7 @@ Two `[connection]` entries in `country.tscn` route `Mortality.mortality_changed`
 
 **Age bands are fixed by the data.** Each band reads its population and deaths (turned into rates) from the mortality file by its `key` (`value["bands"][band.key]` in `set_mortality`). The WHO files hold only the 7 bands above (`0-4`, `5-14`, `15-29`, `30-49`, `50-59`, `60-69`, `70+`), so these are the only bands the engine can run. A band whose key is not in the file errors on load. Other brackets need mortality data in those brackets.
 
-**Saving.** `Count` saves each band's population (`population`, keyed by band) and restores the bands from it on load. Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing; loading does not recalculate it. `SAVE_VERSION` is 7.
+**Saving.** Each city saves its band populations (`population`, keyed by band) inside the country's `settlements` list and restores them on load, and `Count` recounts from the cities. Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing; loading does not recalculate it. `SAVE_VERSION` is 8.
 
 ## `life_expectancy.gd` by symbol
 

@@ -16,7 +16,6 @@ func set_mortality(value):
 	mortality = value
 	for band in age_bands.get_children():
 		var band_data = value["bands"][band.key]
-		band.population = band_data["population"]
 		band.death_rates = {}
 		for cause in band_data["deaths"]:
 			band.death_rates[cause] = band_data["deaths"][cause] / band_data["population"]

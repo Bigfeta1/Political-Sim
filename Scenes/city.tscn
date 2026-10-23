@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Country/Settlements/city.gd" id="1_city"]
+[ext_resource type="Script" path="res://Scripts/Country/Settlements/city_population.gd" id="2_city_population"]
+
+[node name="City" type="Node"]
+script = ExtResource("1_city")
+
+[node name="Population" type="Node" parent="."]
+script = ExtResource("2_city_population")

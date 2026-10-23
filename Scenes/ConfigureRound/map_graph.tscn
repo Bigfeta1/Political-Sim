@@ -1,6 +1,18 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" uid="uid://eoj2i8vf3fp6" path="res://Scripts/Map/map_graph.gd" id="1_graph"]
+[ext_resource type="Script" path="res://Scripts/Map/terrain_generator.gd" id="2_terrain"]
+[ext_resource type="Script" uid="uid://dg71fiov46hlf" path="res://Scripts/Map/random_terrain.gd" id="3_random"]
+[ext_resource type="Script" path="res://Scripts/Map/earth_terrain.gd" id="4_earth"]
 
 [node name="MapGraph" type="Node"]
 script = ExtResource("1_graph")
+
+[node name="TerrainGenerator" type="Node" parent="."]
+script = ExtResource("2_terrain")
+
+[node name="RandomTerrain" type="Node" parent="TerrainGenerator"]
+script = ExtResource("3_random")
+
+[node name="EarthTerrain" type="Node" parent="TerrainGenerator"]
+script = ExtResource("4_earth")

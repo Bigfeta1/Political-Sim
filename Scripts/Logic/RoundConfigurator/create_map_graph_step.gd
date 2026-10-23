@@ -11,6 +11,6 @@ func run(configurator):
 	var save_data = config.save_data
 
 	if not save_data.has("map"):
-		map_graph.generate(config.get_map_dimensions())
+		map_graph.generate(config.get_map_dimensions(), config.map_type)
 	else:
 		map_graph.load_save_data(save_data["map"])

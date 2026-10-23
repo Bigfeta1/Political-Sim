@@ -32,7 +32,9 @@ func configure_country(country, country_name):
 	
 	# The target must be set before the mortality data, which calibrates against it.
 	country_node_data.country_target_life_expectancy = country_data["life_expectancy"]
-	country_node_data.country_mortality = MortalityFiles.find_by_id(country_data["id"])
+	var mortality = MortalityFiles.find_by_id(country_data["id"])
+	country_node_data.country_mortality = mortality
+	country.settlements.settle(mortality)
 	country_node_data.country_risk_prevalence = country_data["risk_prevalence"]
 	country_node_data.country_workers = country_data["workers"]
 #endregion

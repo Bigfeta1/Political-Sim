@@ -2,8 +2,6 @@ extends Node
 
 const MapCell = preload("res://Scripts/Map/map_cell.gd")
 
-const LAND_SHARE = 0.29
-
 const DIRECTIONS = [
 	Vector2i(1, 0),
 	Vector2i(1, -1),
@@ -13,12 +11,14 @@ const DIRECTIONS = [
 	Vector2i(0, 1),
 ]
 
+@onready var terrain_generator = $TerrainGenerator
+
 var cells := {}
 
-func generate(dimensions: Vector2i) -> void:
+func generate(dimensions: Vector2i, map_type: int) -> void:
 	cells.clear()
 
-	create_cells(dimensions)
+	create_cells(dimensions, map_type)
 	connect_neighbours()
 
 #region Saving
@@ -41,14 +41,12 @@ func load_save_data(data: Dictionary) -> void:
 #endregion
 
 #region Cells
-func create_cells(dimensions: Vector2i) -> void:
-	for row in dimensions.y:
-		for column in dimensions.x:
-			var coordinate = to_axial(column, row)
-			cells[coordinate] = MapCell.new(coordinate, pick_terrain())
+func create_cells(dimensions: Vector2i, map_type: int) -> void:
+	var terrain = terrain_generator.generate(dimensions, map_type)
 
-func pick_terrain() -> int:
-	return MapCell.Terrain.LAND if randf() < LAND_SHARE else MapCell.Terrain.WATER
+	for offset in terrain:
+		var coordinate = to_axial(offset.x, offset.y)
+		cells[coordinate] = MapCell.new(coordinate, terrain[offset])
 
 func to_axial(column: int, row: int) -> Vector2i:
 	return Vector2i(column - floori(row / 2.0), row)

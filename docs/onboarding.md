@@ -19,14 +19,16 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 | `Scenes/ConfigureRound/` | Everything that exists while a round is assembled: the round config node, the round configurator (logic and UI), the country manager, the state manager. |
 | `Scenes/PlayingRound/` | `playing_round_logic.tscn` and `playing_round_ui.tscn`. |
 | `Scenes/country.tscn` | One country instance, with `Data` and a `Parameters` tree (see Country data). |
+| `Scenes/city.tscn` | One city, instanced under a country's `Settlements` (see Settlements). |
 | `Scripts/Autoload/` | The three autoloads: `game_state.gd` (`GameState`), `save_writer.gd` (`SaveWriter`) and `scene_loader.gd` (`SceneLoader`). |
 | `Scripts/Logic/` | `state_router.gd`, `round_config.gd`, and one folder per area: `MainMenu/` (with `RoundConfig/` and `LoadPanel/` for the panels' logic), `RoundConfigurator/`, `PlayingRound/`. |
 | `Scripts/UI/` | UI scripts, one folder per area: `MainMenu/` (with `Panels/RoundConfig/` and `Panels/LoadPanel/`), `ConfigureRound/`, `PlayingRound/` (with `TopBar/`: `top_bar.gd` and `parameter_label.gd`). |
-| `Scripts/Country/` | `Countries/country.gd`, `Parameters/` (one script per parameter node: `population.gd`, `economy.gd`, `public_image.gd`, and `Population/` for the population's children) and `CountryManager/` (manager, logic, factory, list). `country_manager.gd` has `get_player_country()`, which returns the country in `CountryList` whose `data.is_player` is true. |
+| `Scripts/Country/` | `Countries/country.gd`, `Settlements/` (`settlements.gd`, see Settlements), `Parameters/` (one script per parameter node: `population.gd`, `economy.gd`, `public_image.gd`, and `Population/` for the population's children) and `CountryManager/` (manager, logic, factory, list). `country_manager.gd` has `get_player_country()`, which returns the country in `CountryList` whose `data.is_player` is true. |
 | `Scripts/MainScene/` | `main_scene.gd` and `logic.gd`, the registry (see below). |
 | `Scripts/MainMenu/` | `main_menu_router.gd`, the menu's own router, and `Panels/begin_button.gd`. |
 | `Scripts/PlayerManager/` | `player_data.gd`, the `Data` node on each country, the central place to read and write its values (see Country data). |
 | `Scripts/Data/` | Static helpers for reading files: `country_files.gd` (country JSON), `mortality_files.gd` (WHO mortality JSON), `risk_factor_files.gd` (risk factor JSON) and `save_file.gd` (save files). Not nodes; callers `preload` them. |
+| `Data/Maps/` | Land maps of real areas for map types, read through `Scripts/Data/map_files.gd`. `earth_land.json` is the whole Earth. |
 | `Data/Mortality/`, `Data/RiskFactors/` | WHO deaths and population per age band for each country, and relative risks per risk factor. See `docs/life_expectancy.md`. |
 
 Three scripts sit outside this pattern: `Scenes/MainMenu/Buttons/new_game_button.gd` lives beside the scenes, and `Scripts/MainMenu/Panels/begin_button.gd` and `Scripts/MainMenu/main_menu_router.gd` live in a `MainMenu` folder at the scripts root.
@@ -80,10 +82,10 @@ flowchart TD
 	C["PLAYING_ROUND<br/>Free the configurator and its UI<br/>Create the playing round logic<br/>Create the playing round UI"]
 	A -->|"BEGIN pressed, once a country is selected"| B
 	B -->|"Configurator finishes its last step (all_completed)"| C
-	C -->|"Alt pressed (InputHandler)"| A
+	C -->|"Backspace pressed (InputHandler)"| A
 ```
 
-Four things request a state change today: the BEGIN button and the LOAD button both ask for `CONFIGURE_ROUND`, the configurator asks for `PLAYING_ROUND` when its last step is done, and the playing round's `InputHandler` (`playing_round_input.gd`, under `Logic` in `playing_round_logic.tscn`) asks for `MAIN_MENU` when Alt is pressed. `GameState` is global; `MainMenuState` lives inside the menu scene and only changes which panel shows.
+Four things request a state change today: the BEGIN button and the LOAD button both ask for `CONFIGURE_ROUND`, the configurator asks for `PLAYING_ROUND` when its last step is done, and the playing round's `InputHandler` (`playing_round_input.gd`, under `Logic` in `playing_round_logic.tscn`) asks for `MAIN_MENU` when Backspace is pressed. `GameState` is global; `MainMenuState` lives inside the menu scene and only changes which panel shows.
 
 What happens, in order:
 
@@ -148,7 +150,7 @@ The round configurator runs a list of steps in order, builds the systems a round
 | 2 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates the state manager (with `TurnManager` and `PhaseManager`) under `Logic` and registers it as `state_manager`. |
 | 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Creates the country whose id is `config.player_country_id` and sets its `is_player`. |
 | 4 | `CreatePlayers` | `create_players_step.gd` | Creates the opponents through the factory. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
-| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic` and registers it as `map_graph` (it lasts into the playing round). If `config.save_data` has a `map` key it calls `load_save_data(save_data["map"])`; otherwise (a new game, or a save from version 6 or earlier) it calls `generate(config.get_map_dimensions())`. |
+| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic` and registers it as `map_graph` (it lasts into the playing round). If `config.save_data` has a `map` key it calls `load_save_data(save_data["map"])`; otherwise (a new game, or a save from version 6 or earlier) it calls `generate(config.get_map_dimensions(), config.map_type)`. |
 | 6 | `CreateMapConstructor` | `create_map_constructor_step.gd` | Instantiates `map_constructor.tscn` under `Logic` without registering it, calls `initialize(configurator.three_d, map_graph)` and `construct()`, then removes and frees it. |
 | 7 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
 | 8 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. Then `restore_countries` matches each country to its saved entry by `data.id` and calls `country.load_save_data`, which overwrites the base values from the JSON. |
@@ -169,17 +171,20 @@ Each country is a `country.tscn` instance. A country's values that change during
 ```
 Country                  country.gd: holds the nodes below, saves and loads the country
 ├─ Data                  player_data.gd: id, is_player, name, initiative, plus pass-through fields
-└─ Parameters
-   ├─ Population         population.gd: wires its children, merges their save data
-   │  ├─ Count           population_count.gd: population_count, the sum of the age bands
-   │  ├─ AgeBands        age_band.gd per band (7 WHO bands)
-   │  ├─ RiskFactors     risk_factor.gd per factor (Smoking)
-   │  ├─ Mortality       mortality.gd: death rate per band
-   │  ├─ LifeExpectancy  life_expectancy.gd: life_expectancy, calculated
-   │  └─ Workers         workers.gd: workers
-   ├─ Economy            economy.gd: money
-   ├─ PublicImage        public_image.gd: public_image
-   └─ Army, Production, Factions   (no scripts yet)
+├─ Parameters
+│  ├─ Population         population.gd: wires its children, merges their save data
+│  │  ├─ Count           population_count.gd: population_count, the cities' band populations added up
+│  │  ├─ AgeBands        age_band.gd per band (7 WHO bands)
+│  │  ├─ RiskFactors     risk_factor.gd per factor (Smoking)
+│  │  ├─ Mortality       mortality.gd: death rate per band
+│  │  ├─ LifeExpectancy  life_expectancy.gd: life_expectancy, calculated
+│  │  └─ Workers         workers.gd: workers
+│  ├─ Economy            economy.gd: money
+│  ├─ PublicImage        public_image.gd: public_image
+│  └─ Army, Production, Factions   (no scripts yet)
+└─ Settlements           settlements.gd: home for the country's settlements
+   └─ City               city.tscn (city.gd): one city
+      └─ Population      city_population.gd: band_populations, the people living in the city
 ```
 
 `AgeBands`, `RiskFactors`, `Mortality` and `LifeExpectancy` are the life expectancy engine. `docs/life_expectancy.md` covers them.
@@ -201,7 +206,7 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 
 `Data` has no signals and no save or load functions. `country.gd` calls `data.initialize(population, economy, public_image)` in `_ready()`, and `initialize` takes the population's children from `population.gd`'s references (`population.count`, `population.mortality`, `population.life_expectancy`, `population.workers`).
 
-**`country.gd` saves and loads the country.** It has `@onready` references to `data`, `parameters`, `population`, `economy` and `public_image`. Its `get_save_data()` writes `id` and `is_player` from `Data`, then loops over the children of `Parameters` and merges in the save data of each one that has `get_save_data()`. `load_save_data(save_data)` loops the same way and passes the save to each child that has `load_save_data()`. Nodes without a script (Army, Production, Factions) are skipped, and a new parameter node with save functions is saved without editing `country.gd`.
+**`country.gd` saves and loads the country.** It has `@onready` references to `data`, `parameters`, `population`, `economy` and `public_image`. Its `get_save_data()` writes `id` and `is_player` from `Data`, then loops over the children of `Parameters` and merges in the save data of each one that has `get_save_data()`, then merges in `settlements.get_save_data()`. `load_save_data(save_data)` loops the same way and passes the save to each child that has `load_save_data()`, then to `settlements.load_save_data()`. Nodes without a script (Army, Production, Factions) are skipped, and a new parameter node with save functions is saved without editing `country.gd`.
 
 **Base values come from JSON.** The factory's `configure_country` copies each key from the country's JSON file through `Data` when the country is created. `create_country` adds the country to the tree first, so `_ready()` has already connected `Data` to its nodes. Every key below is read unconditionally, so a JSON file missing one errors in the factory.
 
@@ -218,9 +223,27 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 
 The factory also reads `Data/Mortality/mortality_<id>.json` into `country_mortality`, after the target and before the risk prevalence, because setting it calibrates against the target.
 
-**Population has one source.** The country JSON has no population. `Count` adds up the age bands' populations from the WHO mortality file (2023) when `Mortality` emits `mortality_changed`, through a `[connection]` in `country.tscn`, and stores the total with `set_population_count()` so `population_count_changed` reaches the top bar.
+**Population has one source: the cities.** The country JSON has no population. The factory reads the WHO mortality file (2023) and calls `settlements.settle(mortality)`, which puts every band's WHO population into the one city. When the city's `Population` emits `band_populations_changed`, a `[connection]` in `country.tscn` runs `Count._on_band_populations_changed`, which sets each `AgeBand.population` to the cities' total for that band, adds the bands up and stores the total with `set_population_count()`, so `population_count_changed` reaches the top bar.
 
 Godot's JSON parser reads every number as a float, so these values are floats. The labels format them for display.
+
+## Settlements
+
+`Settlements` (`Scripts/Country/Settlements/settlements.gd`) is a child of each `country.tscn`, beside `Parameters`. It holds all settlement code. The plan: each settlement (a city, or the country's rural areas) owns its own population, production and economy, and the country's values become totals added up from its settlements. Its one child is `City`, an instance of `Scenes/city.tscn`. Cities hold the people; the country holds the epidemiology. Death rates, risk factors and life expectancy stay national under `Parameters/Population`, since WHO life expectancy is a national figure, and they read population per band from the cities' total.
+
+| Symbol | Meaning |
+| --- | --- |
+| `city.gd` | `@onready population` (its `Population` child). Saves and loads through it. |
+| `city_population.gd` (`City/Population`) | `band_populations`: people per age band, keyed like the mortality file (`"0-4"` … `"70+"`). `set_band_populations()` stores it and emits `band_populations_changed`. Saves it under `population` and loads it through `set_band_populations()`. |
+| `settlements.gd` `settle(mortality)` | Puts every band's population from the WHO mortality file into the first city. Called by the factory once per country, so today the whole country lives in one city. |
+| `settlements.gd` `band_population(key)` | One band's population added up over every city. `Count` reads it. |
+| `settlements.gd` `get_save_data()` | `{"settlements": [...]}`: one entry per city, in child order, each the city's own `get_save_data()`. |
+| `settlements.gd` `load_save_data(data)` | Gives entry *n* of `data["settlements"]` to city *n*. A save without `settlements` (version 7 or 6) has `population` at the country level; it goes to the first city. `country.gd` calls both after its `Parameters` loop. |
+| `population.gd` `initialize(settlements)` | Called by `country.gd` in `_ready()`; hands `Settlements` to `Count`. |
+
+Cities are saved as a list under `settlements` (version 8), because each city writes the same `population` key and merging them into the country would keep only the first. Loading matches entries to cities by position, which works while the cities are fixed in `country.tscn`. Once cities are created in play, `load_save_data` has to create one city per saved entry instead, and the `Count` connection, which today is a `[connection]` to the fixed `Settlements/City/Population`, has to be made in code as each city is created.
+
+Checked headless in Godot 4.5.1 (2026-10-23), building each country the way `country_factory.gd` does: every country's population equals its WHO total and its life expectancy equals its target. In version 8 (also checked headless, 2026-10-23), a country's save holds `settlements` with one city, and loading it with one band changed moves the city, the band and the country total together. A version 7 country (`population` at the top level) loads into the city the same way. The game itself was not run.
 
 ## Map
 
@@ -235,13 +258,35 @@ The map is split in two: a graph that holds the map's logical data for the whole
 | `MapGraph.cells` | The graph: axial coordinate (`Vector2i(q, r)`) to that cell's `MapCell`. |
 | `MapCell` (`Scripts/Map/map_cell.gd`) | One cell's logical data: `coordinate`, `terrain` and `neighbours` (the coordinates of the cells next to it). A `RefCounted`, not a node, so thousands of cells cost no scene tree nodes. `map_graph.gd` preloads it. |
 | `MapCell.Terrain` | `LAND` or `WATER`. `terrain` is typed `int`, since an enum value is an `int`. |
-| `MapGraph.LAND_SHARE` | Chance of a cell being land, 0.29, roughly Earth's share of land. |
-| `MapGraph.pick_terrain()` | Random terrain per cell, independently. A placeholder: the aim is to recreate Earth. |
+| `TerrainGenerator` (`Scripts/Map/terrain_generator.gd`, child of `MapGraph`) | Hands terrain generation to the child node for the map type. `generators` maps each `RoundConfig.MapType` to its child; `generate(dimensions, map_type)` returns that child's terrain, keyed by column and row. A new map type is a value in `MapType`, a child node with a `generate(dimensions)` script, and an entry in `generators`. |
+| `EarthTerrain` (`Scripts/Map/earth_terrain.gd`, child of `TerrainGenerator`) | The `EARTH` map type. Reads `Data/Maps/earth_land.json` through `Scripts/Data/map_files.gd` (`find_by_id("earth")`). Works at any map size. Runs three passes: threshold, island rescue, bridges. |
+| `EarthTerrain.find_squares()` | The grid squares under a cell: the land map is spread over the whole hex map, odd rows shifted half a cell. |
+| `EarthTerrain.LAND_THRESHOLD` | A cell is land when at least half its squares are land (0.5). |
+| `EarthTerrain.ISLAND_THRESHOLD`, `ISLAND_MAX_SQUARES` | A cell is also land when a single landmass smaller than 200 squares (anything below Australia's 688) covers at least 25% of it on its own; other landmasses' squares in the cell do not count. Gives islands closer to their real shape: New Zealand becomes a chain of three tiles instead of two apart, and New Guinea, Borneo and Sulawesi fill out. `is_land()` applies both rules; `measure_landmasses()` counts each landmass's squares over the whole grid. |
+| `EarthTerrain.count_landmasses()` | Land squares under a cell, per landmass number. `dominant()` is the landmass with the most squares in a cell. |
+| `EarthTerrain.rescue_islands()` | A landmass counts as shown when it is the dominant landmass of some land cell. For every landmass not shown and of at least `MIN_RESCUE_SQUARES` (3) squares, roughly 35,000 km² near the equator, the water cell holding most of its squares becomes land; a landmass whose cells are all land already gets none (Sardinia). The minimum stops specks of 1 or 2 squares being blown up to whole tiles, which made solid east-west rows of land north of Australia; it costs Hawaii, Sicily, Fiji, Vanuatu, the Solomons and the Lesser Sundas. So islands smaller than half a cell (Britain, Japan, Sri Lanka, New Zealand, the Philippines, Cuba, Hawaii and the like) get at least one tile, without lowering the threshold, which would bloat every coastline. |
+| `EarthTerrain.bridge_landmasses()` | A landmass whose cells (land cells it dominates) fall into several disconnected pieces is joined up: each smaller piece is connected to the largest along `cheapest_path()`, and the water cells on that path become land. Fixes narrow land such as Panama between North and South America. Different landmasses are never bridged. |
+| `EarthTerrain.cheapest_path()` | Shortest path counting only water cells, moving only through cells that hold squares of that landmass, so a bridge follows the real land. 0-1 breadth-first search: land steps cost 0, water steps cost 1. |
+| `EarthTerrain.neighbours()` | The six neighbouring cells in column and row form; odd rows are shifted half a cell right, matching `MapGraph`. |
+| `Data/Maps/earth_land.json` | `rows`: 180 rows of 360 numbers, one per 1° square from 90° N and 180° W. Each is 0 for water or the number of the Natural Earth land polygon the square's centre lies in. Equirectangular (longitude and latitude both linear, `projection` in the file), so high latitudes such as Alaska are stretched east-west, by 2 at 60°. Built from Natural Earth 1:110m land (public domain); each polygon is a separate landmass, so islands stay separate even where the 1° grid closes a strait. The build script is not in the project. |
+| Earth on the small map | Checked in Python with the same sampling and passes: 16 islands rescued, 4 bridge cells (Panama among them), 35.2% of cells land; Britain 2 tiles, Ireland 1, Iceland 1, Japan 3, Cuba 1, Hispaniola 1, Sri Lanka 1, Luzon 1, Mindanao 1, Madagascar 5, Tasmania 1, New Zealand 3. Land is more than Earth's 29% because the projection enlarges Antarctica and the far north. Path and tie choices can differ from the Python check. A Kavrayskiy VII version was tried and dropped: its curved edge left empty ocean between Alaska and Chukotka and cost Australia a column. Miller versions with the poles cropped were previewed and not chosen. |
+| `RandomTerrain` (`Scripts/Map/random_terrain.gd`, child of `TerrainGenerator`) | The `RANDOM` map type: continents from seeds. The rows below are its symbols. |
+| `RandomTerrain.generate()` | Builds a height per cell from three parts, then makes the highest `LAND_SHARE` of cells land. The parts: the nearest continent's height at the cell's warped position, plus coastline detail, minus the edge fade. |
+| `CONTINENT_COUNT`, `place_continents()` | Up to 6 continent centres, placed at random inside the margins (`CONTINENT_MARGIN`: 12% of the width, 15% of the height) and at least `CONTINENT_SPACING` (a 4.2th of the map width) apart. Each gets a random angle, a stretch from 1 to `CONTINENT_STRETCH_MAX` (2.2) and a radius from `CONTINENT_RADIUS_MIN` to `CONTINENT_RADIUS_MAX` (5 to 9 cells). Gives up after `PLACEMENT_ATTEMPTS` (5000), so a crowded map can get fewer. |
+| `continent_height()` | 1 at a continent's centre, falling to 0 at its radius along the short axis, over a stretched ellipse. A cell takes the highest value of any continent. |
+| `WARP_STRENGTH`, `WARP_FREQUENCY` | Two noise fields shift each cell's position by up to a few cells before measuring its distance to the continents, so the ellipses become irregular shapes. Stronger warp curls land into rings and strands. |
+| `DETAIL_STRENGTH`, `DETAIL_FREQUENCY` | A finer noise field added to the height, which roughens coastlines and raises a few offshore islands. |
+| `edge_fade()` | Lowers the height within `EDGE_FADE` (4) cells of the map border, so land rarely touches the edge. |
+| `normalise()` | Rescales a noise field to mean 0 and standard deviation 1. Noise implementations differ in range, so the strengths above mean the same whatever the noise returns. |
+| `create_noise()` | A `FastNoiseLite` with a random seed, the given frequency and octaves, and Godot's other defaults. |
+| `find_positions()` | Each cell's real position on the hex layout (odd rows half a cell right, rows √3/2 apart), so shapes are not stretched. |
+| `RandomTerrain.find_sea_level()` | The height below which `1 − LAND_SHARE` of cells fall, so land is always `LAND_SHARE` (0.29, roughly Earth's share) of the map, whatever the noise. |
 | `MapGraph.DIRECTIONS` | The six axial neighbour offsets. |
 | `MapGraph.to_axial()` | Turns a column and row into axial coordinates. The hexes are pointy-top (a vertex points up), and odd rows sit half a hex to the right, so the grid is a rectangle. |
-| `MapGraph.generate(dimensions)` | Clears `cells`, creates `dimensions.x` columns by `dimensions.y` rows, and links each cell to the neighbours that exist. |
+| `MapGraph.generate(dimensions, map_type)` | Clears `cells`, creates `dimensions.x` columns by `dimensions.y` rows with terrain from `TerrainGenerator` for `map_type`, and links each cell to the neighbours that exist. |
 | `RoundConfig.MapSize`, `MAP_DIMENSIONS` | Named map sizes and their columns by rows. `SMALL` is 74 by 46, Civilization's small map. |
 | `RoundConfig.map_size` | The chosen size, `SMALL` by default. Nothing in the menu sets it yet. |
+| `RoundConfig.MapType`, `map_type` | How terrain is made: `RANDOM` or `EARTH` (the default). Real geographic areas are further types. Nothing in the menu sets it yet, and it is not saved: a loaded game keeps its saved terrain. |
 | `RoundConfig.get_map_dimensions()` | The dimensions of `map_size`, read by the `CreateMapGraph` step. |
 | `MapGraph.get_save_data()` | `{"cells": [[q, r, terrain], ...]}`. JSON cannot key on `Vector2i`, so cells are saved as arrays. Neighbours are not saved. |
 | `MapGraph.load_save_data()` | Clears `cells`, recreates each saved cell with its terrain (the parser reads numbers as floats, so each is cast back to int), then runs `connect_neighbours()`. |
@@ -276,7 +321,7 @@ The playing round does not own its systems. It is a thin scene that receives the
 
 A new number format is a new `Format` value and a branch in `format_value`. The symbols are a placeholder for icon images.
 - **Demographics panel.** The side panel's `DemographicsButton` sets `MenuStateManager` to `DEMOGRAPHICS`, and `round_state_router.gd` creates `Scenes/PlayingRound/Panels/demographics_panel.tscn` under the UI's `Panels` and calls `initialize(player_country, menu_state_manager)`. The router gets the country manager from `event_coordinators.gd`. Pressing the button again, or the panel's X (`close_button.gd`, which `demographics_panel.gd` hands the `MenuStateManager`), sets `STANDBY`, and the router frees the panel. Inside `Panel/CountryScroll/CountryList`, `demographics_panel.gd` hands the country to three views in `Scripts/UI/PlayingRound/Panels/Demographics/`: `demographics_summary.gd` (name, life expectancy and target, population), `population_table.gd` (population and share per age band, with a bar scaled to the largest band) and `life_table_view.gd` (m, q, l and L per band from `LifeExpectancy.life_table()`, then years before 70, share reaching 70, years remaining at 70 next to the flat-rate value, and e0). The life table view also shows a key explaining n, m(x), q(x), l(x) and L(x), and a totals grid with a note for each figure. All three build their cells with `table_cell.gd` (header, value and note labels). They redraw on `population_count_changed` and `life_expectancy_changed`. All numbers come from the country's nodes; the views only compute each band's share of the total and format values.
-- **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) holds `camera`, the main scene's `3D/Camera3D`: the router passes `three_d` to `playing_round.initialize(...)`, which calls `three_d.camera.initialize(three_d.get_tile_bounds())` and then `input_handler.initialize(three_d.camera)`. WASD moves the camera and the mouse wheel zooms it (see Camera). It handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
+- **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) holds `camera`, the main scene's `3D/Camera3D`: the router passes `three_d` to `playing_round.initialize(...)`, which calls `three_d.camera.initialize(three_d.get_tile_bounds())` and then `input_handler.initialize(three_d.camera)`. WASD moves the camera and the mouse wheel zooms it (see Camera). It handles two keys: F5 calls `SaveWriter.save()`, and Backspace requests `MAIN_MENU`.
 - **Teardown.** The router frees the UI on `MAIN_MENU`. `logic.clear()` frees the playing round logic, the country manager and the state manager together.
 
 ### Camera
@@ -300,14 +345,15 @@ Checked in Godot 4.5.1 headless (2026-10-23) on the small map's bounds: at zoom 
 | `TOP_DOWN_PITCH` | −90°, straight down. |
 | `zoom_in()`, `zoom_out()`, `set_zoom()` | Change `zoom`, clamped to 0..1, and place the camera. |
 | `far_distance()` | Height at which the tile bounds, grown by `TileFactory.TILE_SIZE` so whole tiles fit, fill the view when looking straight down. Takes the larger of the fit for depth (vertical field of view, `fov`) and for width (`fov` times the viewport's aspect). Assumes the camera's default `keep_aspect` (keep height). Read each time the camera is placed, so it follows window resizes on the next zoom or move. |
-| `pan(offset)` | Moves `focus` by `offset` and places the camera. |
-| `place()` | Clamps `focus` to the bounds, sets the pitch to `lerp(close_pitch, TOP_DOWN_PITCH, zoom)`, takes the point looked at as `focus` blended towards the bounds' centre by `zoom`, and puts the camera `close_distance · (far_distance / close_distance)^zoom` back from it along its view. |
-| `CAMERA_SPEED` | In `playing_round_input.gd`. Units per second, 10, at every zoom level. |
+| `zoom_distance()` | Camera to the point it looks at for the current `zoom`: `close_distance · (far_distance / close_distance)^zoom`. |
+| `pan(offset)` | Moves `focus` by `offset` times `zoom_distance() / close_distance / (1 − zoom)`, then places the camera. The first factor makes the view move further the further out the camera is. The second undoes the slide towards the map's centre, which would otherwise shrink the view's movement by `1 − zoom`. Together the map moves the same distance on screen at every zoom. Does nothing at zoom 1, where the view is fixed on the whole map. |
+| `place()` | Clamps `focus` to the bounds, sets the pitch to `lerp(close_pitch, TOP_DOWN_PITCH, zoom)`, takes the point looked at as `focus` blended towards the bounds' centre by `zoom`, and puts the camera `zoom_distance()` back from it along its view. |
+| `CAMERA_SPEED` | In `playing_round_input.gd`. Units per second at zoom 0, 10. `pan()` scales it for other zoom levels. |
 | `read_zoom()` | In `playing_round_input.gd`. Wheel up calls `zoom_in()`, wheel down `zoom_out()`. |
 | `move_camera()` | In `playing_round_input.gd`. Calls `camera.pan()` with the held direction times speed and frame time. Diagonals are normalised, so they are not faster. |
 | `read_direction()` | In `playing_round_input.gd`. D and A move along the camera's right, flattened onto the ground; W and S along the ground direction 90° from it (`Vector3.UP.cross(right)`). Taken from the right axis because the facing points straight down at zoom 1 and has no ground direction there. |
 
-The bounds use tile centres, so the view can centre on an edge tile but not go past it. Because the point looked at slides towards the centre as `zoom` rises, WASD moves the view less the further out it is, and not at all at zoom 1. A full-screen `Control` with the default mouse filter does not stop wheel events from reaching `_unhandled_input` (checked headless in Godot 4.5.1). Whether scrolling over the demographics panel also zooms has not been checked. The keys are raw keycodes, like F5 and Alt; the project has no input actions.
+The bounds use tile centres, so the view can centre on an edge tile but not go past it. `focus` can still only reach the bounds, and the view sits between it and the centre, so the area the view can reach shrinks as `zoom` rises, down to the centre alone at zoom 1. Checked headless in Godot 4.5.1 at 1920 by 1080 (2026-10-23): one 0.1-unit pan moves the map 16.8 px sideways at every zoom from 0 to 0.9, and between 15.7 px (zoom 0) and 16.8 px (zoom 0.9) forward, since the tilted view shortens ground depth on screen. A full-screen `Control` with the default mouse filter does not stop wheel events from reaching `_unhandled_input` (checked headless in Godot 4.5.1). Whether scrolling over the demographics panel also zooms has not been checked. The keys are raw keycodes, like F5 and Backspace; the project has no input actions.
 
 ## Turn and phase system
 
@@ -338,14 +384,14 @@ The turn order is computed once, during `SetTurnOrder`. It does not change betwe
 
 | Key | Source |
 | --- | --- |
-| `version` | `SAVE_VERSION` (7). Written but not checked on load. |
+| `version` | `SAVE_VERSION` (8). Written but not checked on load. |
 | `round` | `StateManager.get_save_data()`: `current_round` |
 | `phase` | `PhaseManager.get_save_data()`: `current_phase` |
 | `turn` | `TurnManager.get_save_data()`: `turn_order`, `current_turn_index` |
 | `map` | `MapGraph.get_save_data()`: `cells` |
-| `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `population` (each age band's population, keyed by band) from `Count` and `workers` from `Workers` (merged by `Population`), `money` from `Economy`, `public_image` from `PublicImage` |
+| `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `settlements` (a list with one entry per city, each holding `population`, the city's people per age band) from `Settlements`, `workers` from `Workers` (merged by `Population`), `money` from `Economy`, `public_image` from `PublicImage` |
 
-Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, workers and population are saved because they are meant to change during play; the JSON and the mortality file only hold their base values. Population is saved per age band, not as a total: `Count.load_save_data` writes each band's population back and recounts, so the bands stay the only source. Life expectancy is not saved; it is recalculated from the mortality data when the country is created. Deaths per band are not saved. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
+Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, workers and population are saved because they are meant to change during play; the JSON and the mortality file only hold their base values. Population is saved per age band, not as a total: the city's `load_save_data` writes the bands back through `set_band_populations()`, and `Count` recounts from the cities, so the cities stay the only source. Life expectancy is not saved; it is recalculated from the mortality data when the country is created. Deaths per band are not saved. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
 
 **Load.** There is no separate load path. The load button puts the parsed save on the `round_config` node and requests `CONFIGURE_ROUND`, and the normal steps build the round to that config. `CreatePlayerCountry` reads the player id from the config unchanged, `CreatePlayers` creates the saved opponents, and `RestoreSavedState` applies round, phase and turn, then each country's saved values. The countries are first created from their JSON and then overwritten from the save. `load_save_data` sets fields directly. `PhaseManager` must not go through `advance_phase`, because `phase_changed` calls `start_turns` and would reset the turn index.
 
@@ -411,7 +457,7 @@ Today only one prefetch exists: `StateRouter` requests the playing round logic a
 
 The round setup flow is complete end to end in code, but several parts are placeholders. Items marked "from reading the code" have not been confirmed by running the game.
 
-- **Return to menu is Alt only.** The router's `MAIN_MENU` branch clears `Logic`, rebuilds the menu and frees the playing round UI. Alt is the only trigger, and it is the raw key (the project has no input action for it), so there is no on-screen way back. A second game after returning was checked in a run, with END TURN stepping through the countries.
+- **Return to menu is Backspace only.** The router's `MAIN_MENU` branch clears `Logic`, rebuilds the menu and frees the playing round UI. Backspace is the only trigger, and it is the raw key (the project has no input action for it), so there is no on-screen way back. A second game after returning was checked in a run, with END TURN stepping through the countries.
 - **Phase advance is untested.** END TURN past the last country (phase change, `start_turns`, round counter) has not been run yet.
 - **Steps finish instantly.** All the configurator steps are synchronous, so the whole configure state runs in one frame and the checklist UI is replaced before it can be seen. It becomes visible once a step awaits something. The same applies to the background load of the playing round scenes, which starts when configure begins: with every step finishing in one frame it has no time to run ahead, so the prefetch has no measurable effect yet.
 - **Unclaimed requests.** A scene requested through `SceneLoader.request` is only released from the background loader once `instantiate` claims it. `CONFIGURE_ROUND` always ends in `PLAYING_ROUND` today, so it is claimed. A way to cancel setup would leave the request unclaimed.
@@ -422,7 +468,7 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Nothing listens to `round_changed`.** There is no round label yet.
 - **Save and load are untested.** F5 save, the load entry, the X button and the restore step have been written but not run in the editor.
 - **One save slot.** F5 overwrites `user://saves/save.json`. Multiple slots would need a name per save and a list in the load panel.
-- **Version is not checked.** `version` is written and ignored on load. Version 6 (2026-10-23) saves `population` as a dictionary of band populations. Version 7 (2026-10-23) adds `map`; a version 6 save loads with a newly generated map. A save from version 5 or earlier has no such dictionary and errors in `Count.load_save_data`.
+- **Version is not checked.** `version` is written and ignored on load. Version 6 (2026-10-23) saves `population` as a dictionary of band populations. Version 7 (2026-10-23) adds `map`; a version 6 save loads with a newly generated map. Version 8 (2026-10-23) moves `population` into `settlements`, a list of cities; `Settlements.load_save_data` puts a version 7 or 6 country's `population` into the first city. A save from version 5 or earlier has no such dictionary and errors in the city's `load_save_data`.
 - **Saved countries must exist.** A save naming a country with no JSON file would fail in the factory. This is accepted for now.
 - **Country values never change.** Money, public image, workers and population are loaded and saved, and life expectancy and population count are calculated when the country is created, but nothing in play changes any of them yet.
 - **Money measure is open.** `money` is total household wealth (2022). Gross national assets (about $269 trillion for the US) and net national wealth were discussed as alternatives; a comparable source for all six countries has not been found.

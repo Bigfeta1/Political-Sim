@@ -36,11 +36,17 @@ func far_distance() -> float:
 	var half_height = tan(deg_to_rad(fov) / 2.0)
 	var aspect = get_viewport().get_visible_rect().size.aspect()
 	return maxf(area.size.y / 2.0 / half_height, area.size.x / 2.0 / (half_height * aspect))
+
+func zoom_distance() -> float:
+	return close_distance * pow(far_distance() / close_distance, zoom)
 #endregion
 
 #region Movement
 func pan(offset: Vector3) -> void:
-	focus += offset
+	if zoom >= 1.0:
+		return
+
+	focus += offset * zoom_distance() / close_distance / (1.0 - zoom)
 	place()
 
 func place() -> void:
@@ -49,8 +55,7 @@ func place() -> void:
 
 	var centre = bounds.get_center()
 	var target = focus.lerp(Vector3(centre.x, 0.0, centre.y), zoom)
-	var distance = close_distance * pow(far_distance() / close_distance, zoom)
 
 	rotation.x = lerpf(close_pitch, TOP_DOWN_PITCH, zoom)
-	global_position = target + global_basis.z * distance
+	global_position = target + global_basis.z * zoom_distance()
 #endregion
