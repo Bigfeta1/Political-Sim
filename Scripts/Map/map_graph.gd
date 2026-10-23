@@ -20,6 +20,24 @@ func generate() -> void:
 	create_cells()
 	connect_neighbours()
 
+#region Saving
+func get_save_data() -> Dictionary:
+	var saved_cells := []
+
+	for cell in cells:
+		saved_cells.append([cell.x, cell.y])
+
+	return {"cells": saved_cells}
+
+func load_save_data(data: Dictionary) -> void:
+	cells.clear()
+
+	for saved_cell in data["cells"]:
+		cells[Vector2i(int(saved_cell[0]), int(saved_cell[1]))] = []
+
+	connect_neighbours()
+#endregion
+
 #region Cells
 func create_cells() -> void:
 	for row in HEIGHT:

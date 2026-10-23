@@ -148,7 +148,7 @@ The round configurator runs a list of steps in order, builds the systems a round
 | 2 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates the state manager (with `TurnManager` and `PhaseManager`) under `Logic` and registers it as `state_manager`. |
 | 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Creates the country whose id is `config.player_country_id` and sets its `is_player`. |
 | 4 | `CreatePlayers` | `create_players_step.gd` | Creates the opponents through the factory. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
-| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic`, registers it as `map_graph` (it lasts into the playing round), and calls `generate()`. |
+| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic` and registers it as `map_graph` (it lasts into the playing round). If `config.save_data` has a `map` key it calls `load_save_data(save_data["map"])`; otherwise (a new game, or a save from version 6 or earlier) it calls `generate()`. |
 | 6 | `CreateMapConstructor` | `create_map_constructor_step.gd` | Instantiates `map_constructor.tscn` under `Logic` without registering it, calls `initialize(configurator.three_d, map_graph)` and `construct()`, then removes and frees it. |
 | 7 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
 | 8 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. Then `restore_countries` matches each country to its saved entry by `data.id` and calls `country.load_save_data`, which overwrites the base values from the JSON. |
@@ -237,6 +237,8 @@ The map is split in two: a graph that holds the map's logical data for the whole
 | `MapGraph.DIRECTIONS` | The six axial neighbour offsets. |
 | `MapGraph.to_axial()` | Turns a column and row into axial coordinates. The hexes are pointy-top (a vertex points up), and odd rows sit half a hex to the right, so the grid is a rectangle. |
 | `MapGraph.generate()` | Clears `cells`, creates all 64, and links each to the neighbours that exist. |
+| `MapGraph.get_save_data()` | `{"cells": [[q, r], ...]}`. JSON cannot key on `Vector2i`, so cells are saved as pairs. Neighbours are not saved. |
+| `MapGraph.load_save_data()` | Clears `cells`, recreates each saved cell (the parser reads numbers as floats, so each is cast back to int), then runs `connect_neighbours()`. |
 | `MapConstructor.three_d` | The main scene's `3D` node. Tiles go under its `hex_tile_grid`. |
 | `MapConstructor.map_graph` | The registered `MapGraph`, read to know which tiles to build. |
 | `MapConstructor.construct()` | Calls `tile_factory.build(map_graph.cells, three_d.hex_tile_grid)`. |
@@ -245,7 +247,7 @@ The map is split in two: a graph that holds the map's logical data for the whole
 | `TileFactory.to_position()` | Axial coordinate to tile centre on the XZ plane: x = size·√3·(q + r/2), z = size·1.5·r. Neighbours land √3 apart, so tiles touch edge to edge. Positions are taken relative to the grid's centre. |
 | `TileFactory.find_centre()` | The midpoint of the smallest box around every tile centre. `build()` subtracts it from each tile's position, so the map's centre sits on the origin of `HexTileGrid`. The 8 by 8 grid spans x −6.5 to 6.5 and z −5.25 to 5.25. |
 
-Edge cells have fewer neighbours: on the 8 by 8 grid, 36 cells have 6, and the rest have 2 to 5. The graph is not saved.
+Edge cells have fewer neighbours: on the 8 by 8 grid, 36 cells have 6, and the rest have 2 to 5. The graph is saved under `map`, and a loaded game builds its tiles from the saved graph through the same `CreateMapConstructor` step.
 
 ## Playing round
 
@@ -313,10 +315,11 @@ The turn order is computed once, during `SetTurnOrder`. It does not change betwe
 
 | Key | Source |
 | --- | --- |
-| `version` | `SAVE_VERSION` (6). Written but not checked on load. |
+| `version` | `SAVE_VERSION` (7). Written but not checked on load. |
 | `round` | `StateManager.get_save_data()`: `current_round` |
 | `phase` | `PhaseManager.get_save_data()`: `current_phase` |
 | `turn` | `TurnManager.get_save_data()`: `turn_order`, `current_turn_index` |
+| `map` | `MapGraph.get_save_data()`: `cells` |
 | `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `population` (each age band's population, keyed by band) from `Count` and `workers` from `Workers` (merged by `Population`), `money` from `Economy`, `public_image` from `PublicImage` |
 
 Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, workers and population are saved because they are meant to change during play; the JSON and the mortality file only hold their base values. Population is saved per age band, not as a total: `Count.load_save_data` writes each band's population back and recounts, so the bands stay the only source. Life expectancy is not saved; it is recalculated from the mortality data when the country is created. Deaths per band are not saved. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
@@ -396,7 +399,7 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Nothing listens to `round_changed`.** There is no round label yet.
 - **Save and load are untested.** F5 save, the load entry, the X button and the restore step have been written but not run in the editor.
 - **One save slot.** F5 overwrites `user://saves/save.json`. Multiple slots would need a name per save and a list in the load panel.
-- **Version is not checked.** `version` is written and ignored on load. Version 6 (2026-10-23) saves `population` as a dictionary of band populations. A save from version 5 or earlier has no such dictionary and errors in `Count.load_save_data`.
+- **Version is not checked.** `version` is written and ignored on load. Version 6 (2026-10-23) saves `population` as a dictionary of band populations. Version 7 (2026-10-23) adds `map`; a version 6 save loads with a newly generated map. A save from version 5 or earlier has no such dictionary and errors in `Count.load_save_data`.
 - **Saved countries must exist.** A save naming a country with no JSON file would fail in the factory. This is accepted for now.
 - **Country values never change.** Money, public image, workers and population are loaded and saved, and life expectancy and population count are calculated when the country is created, but nothing in play changes any of them yet.
 - **Money measure is open.** `money` is total household wealth (2022). Gross national assets (about $269 trillion for the US) and net national wealth were discussed as alternatives; a comparable source for all six countries has not been found.

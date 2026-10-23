@@ -2,7 +2,7 @@ extends Node
 
 const SAVE_DIR = "user://saves/"
 const SAVE_PATH = SAVE_DIR + "save.json"
-const SAVE_VERSION = 6
+const SAVE_VERSION = 7
 
 var logic
 
@@ -12,6 +12,7 @@ func initialize(logic_reference):
 func save() -> void:
 	var state_manager = logic.get_system("state_manager")
 	var country_manager = logic.get_system("country_manager")
+	var map_graph = logic.get_system("map_graph")
 
 	var countries := []
 	for country in country_manager.country_list.get_children():
@@ -23,6 +24,7 @@ func save() -> void:
 		"phase": state_manager.phase_manager.get_save_data(),
 		"turn": state_manager.turn_manager.get_save_data(),
 		"countries": countries,
+		"map": map_graph.get_save_data(),
 	}
 
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)

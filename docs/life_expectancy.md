@@ -44,7 +44,7 @@ Two `[connection]` entries in `country.tscn` route `Mortality.mortality_changed`
 
 **Age bands are fixed by the data.** Each band reads its population and deaths (turned into rates) from the mortality file by its `key` (`value["bands"][band.key]` in `set_mortality`). The WHO files hold only the 7 bands above (`0-4`, `5-14`, `15-29`, `30-49`, `50-59`, `60-69`, `70+`), so these are the only bands the engine can run. A band whose key is not in the file errors on load. Other brackets need mortality data in those brackets.
 
-**Saving.** `Count` saves each band's population (`population`, keyed by band) and restores the bands from it on load. Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing; loading does not recalculate it. `SAVE_VERSION` is 6.
+**Saving.** `Count` saves each band's population (`population`, keyed by band) and restores the bands from it on load. Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing; loading does not recalculate it. `SAVE_VERSION` is 7.
 
 ## `life_expectancy.gd` by symbol
 
