@@ -40,6 +40,42 @@ Population             population.gd: merges its children's save data
 
 **Saving.** Life expectancy is calculated, so `LifeExpectancy` saves nothing. `SAVE_VERSION` is 5.
 
+## `life_expectancy.gd` by symbol
+
+The script carries no comments. What each part is for lives here.
+
+| Symbol | Meaning |
+| --- | --- |
+| `target_life_expectancy` | The country's real life expectancy at birth. The open band is calibrated so the life table reproduces it. |
+| `calibrate()` | A flat death rate over the open band overstates the years lived in it, so the band takes the years that reproduce the target. |
+| `calculate()` | Years lived in the open band scale inversely with its death rate. |
+| `life_table()` | Years lived before the open band and the share of people who reach it, for one person at birth. |
+
+## `mortality.gd` by symbol
+
+| Symbol | Meaning |
+| --- | --- |
+| `mortality` | LifeExpectancy calibrates against its target when this is set, so the target must be set first. |
+
+## `age_band.gd` by symbol
+
+| Symbol | Meaning |
+| --- | --- |
+| `key` | The band's key in the mortality file, e.g. "30-49" or "70+". Start age and width are read from it. |
+| `width` | Years the band covers; 0 for the open-ended last band. |
+| `deaths` | Deaths in this band per WHO cause name, at game start. |
+
+## `risk_factor.gd` by symbol
+
+| Symbol | Meaning |
+| --- | --- |
+| `key` | The factor's data file in Data/RiskFactors, e.g. "smoking". |
+| `min_age` | Bands starting below this age are unaffected. |
+| `relative_risks` | Relative risk of death per exposure level and cause; causes not listed are unaffected. |
+| `start_prevalence`, `prevalence` | Share of people at each exposure level, at game start and now. Empty until the country's prevalence is known. |
+| `multiplier()` | How much this factor scales a cause's deaths in a band, compared with game start. |
+| `mean_risk()` | Average relative risk across the population; the reference level has a relative risk of 1. |
+
 ## The maths
 
 Life expectancy at birth is the area under the survival curve. The engine computes it as a sum over age bands.

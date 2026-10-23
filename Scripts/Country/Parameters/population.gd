@@ -11,7 +11,6 @@ func _ready() -> void:
 	mortality.initialize(age_bands, risk_factors)
 	life_expectancy.initialize(age_bands, mortality)
 
-# Every child with save functions is included, the same way country.gd handles Parameters.
 func get_save_data() -> Dictionary:
 	var save_data := {}
 	for child in get_children():
