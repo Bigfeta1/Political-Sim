@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3 uid="uid://doqpl6qv8n4ly"]
+[gd_scene load_steps=11 format=3 uid="uid://doqpl6qv8n4ly"]
 
 [ext_resource type="Script" uid="uid://o68lhplth3hb" path="res://Scripts/UI/PlayingRound/Panels/Demographics/demographics_panel.gd" id="1_panel"]
 [ext_resource type="Script" uid="uid://bhs8disk2kmdx" path="res://Scripts/UI/PlayingRound/Panels/Demographics/demographics_summary.gd" id="2_summary"]
 [ext_resource type="Script" uid="uid://difuc777hl3r7" path="res://Scripts/UI/PlayingRound/Panels/Demographics/population_table.gd" id="3_population"]
 [ext_resource type="Script" uid="uid://d3dnkikoaf6n3" path="res://Scripts/UI/PlayingRound/Panels/Demographics/life_table_view.gd" id="4_life_table"]
+[ext_resource type="Script" uid="uid://ma6hc7dweuo6" path="res://Scripts/UI/PlayingRound/Panels/Demographics/close_button.gd" id="5_close"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hhl4"]
 bg_color = Color(0.01773239, 0.017732395, 0.017732374, 1)
@@ -50,6 +51,19 @@ text = "DEMOGRAPHICS
 "
 label_settings = SubResource("LabelSettings_kgrr2")
 horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Panel"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -48.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 48.0
+grow_horizontal = 0
+text = "X"
+script = ExtResource("5_close")
 
 [node name="CountryScroll" type="ScrollContainer" parent="Panel"]
 layout_mode = 0

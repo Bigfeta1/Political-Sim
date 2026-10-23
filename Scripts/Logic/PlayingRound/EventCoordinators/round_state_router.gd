@@ -30,7 +30,7 @@ func create_demographics_panel():
 
 	demographics_panel_instance = SceneLoader.instantiate(DEMOGRAPHICS_PANEL)
 	ui.panels.add_child(demographics_panel_instance)
-	demographics_panel_instance.initialize(country_manager.get_player_country())
+	demographics_panel_instance.initialize(country_manager.get_player_country(), menu_state_manager)
 
 func destroy_demographics_panel():
 	if demographics_panel_instance == null:
