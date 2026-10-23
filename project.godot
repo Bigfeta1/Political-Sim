@@ -21,6 +21,11 @@ GameState="*res://Scripts/Autoload/game_state.gd"
 SaveWriter="*res://Scripts/Autoload/save_writer.gd"
 SceneLoader="*res://Scripts/Autoload/scene_loader.gd"
 
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+
 [rendering]
 
 anti_aliasing/quality/msaa_3d=1

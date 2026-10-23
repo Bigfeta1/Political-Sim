@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://baell6beh14va" path="res://Scripts/UI/PlayingRound/TopBar/top_bar.gd" id="5_topbar"]
 [ext_resource type="Script" uid="uid://cpvlffvdckwel" path="res://Scripts/UI/PlayingRound/SidePanel/side_panel.gd" id="6_oajn6"]
 [ext_resource type="Script" uid="uid://52jlnscsn377" path="res://Scripts/UI/PlayingRound/TopBar/parameter_label.gd" id="6_parameter_label"]
-[ext_resource type="Script" path="res://Scripts/UI/PlayingRound/SidePanel/side_buttons.gd" id="7_h5sma"]
+[ext_resource type="Script" uid="uid://74xx5et2icwq" path="res://Scripts/UI/PlayingRound/SidePanel/side_buttons.gd" id="7_h5sma"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kgrr2"]
 corner_radius_top_left = 60
@@ -49,7 +49,7 @@ script = ExtResource("5_topbar")
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.535
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -102,11 +102,16 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="EndTurnButton" type="Button" parent="Buttons"]
-layout_mode = 0
-offset_left = 1049.0
-offset_top = 609.0
-offset_right = 1139.0
-offset_bottom = 640.0
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.925
+anchor_top = 0.953
+anchor_right = 0.965
+anchor_bottom = 0.953
+offset_left = -90.0
+offset_top = -31.0
+grow_horizontal = 0
+grow_vertical = 0
 text = "END TURN"
 script = ExtResource("2_r6u7c")
 
@@ -121,7 +126,8 @@ mouse_filter = 2
 
 [node name="SidePanel" type="Control" parent="."]
 layout_mode = 1
-anchor_right = 0.056
+anchor_top = 0.037
+anchor_right = 0.031
 anchor_bottom = 1.0
 grow_vertical = 2
 script = ExtResource("6_oajn6")
@@ -147,17 +153,17 @@ script = ExtResource("7_h5sma")
 menu_state = 1
 
 [node name="PhaseLabel" type="Label" parent="."]
-layout_mode = 0
-offset_left = 759.0
-offset_top = 62.0
-offset_right = 799.0
-offset_bottom = 85.0
+layout_mode = 1
+offset_left = 1823.0
+offset_top = 91.0
+offset_right = 1863.0
+offset_bottom = 114.0
 script = ExtResource("3_yyxya")
 
 [node name="TurnLabel" type="Label" parent="."]
-layout_mode = 0
-offset_left = 761.0
-offset_top = 97.0
-offset_right = 801.0
-offset_bottom = 120.0
+layout_mode = 1
+offset_left = 1823.0
+offset_top = 143.0
+offset_right = 1863.0
+offset_bottom = 166.0
 script = ExtResource("4_xpa3x")

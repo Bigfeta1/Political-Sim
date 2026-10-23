@@ -148,7 +148,7 @@ The round configurator runs a list of steps in order, builds the systems a round
 | 2 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates the state manager (with `TurnManager` and `PhaseManager`) under `Logic` and registers it as `state_manager`. |
 | 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Creates the country whose id is `config.player_country_id` and sets its `is_player`. |
 | 4 | `CreatePlayers` | `create_players_step.gd` | Creates the opponents through the factory. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
-| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic` and registers it as `map_graph` (it lasts into the playing round). If `config.save_data` has a `map` key it calls `load_save_data(save_data["map"])`; otherwise (a new game, or a save from version 6 or earlier) it calls `generate()`. |
+| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic` and registers it as `map_graph` (it lasts into the playing round). If `config.save_data` has a `map` key it calls `load_save_data(save_data["map"])`; otherwise (a new game, or a save from version 6 or earlier) it calls `generate(config.get_map_dimensions())`. |
 | 6 | `CreateMapConstructor` | `create_map_constructor_step.gd` | Instantiates `map_constructor.tscn` under `Logic` without registering it, calls `initialize(configurator.three_d, map_graph)` and `construct()`, then removes and frees it. |
 | 7 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
 | 8 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. Then `restore_countries` matches each country to its saved entry by `data.id` and calls `country.load_save_data`, which overwrites the base values from the JSON. |
@@ -233,10 +233,12 @@ The map is split in two: a graph that holds the map's logical data for the whole
 | Symbol | Meaning |
 | --- | --- |
 | `MapGraph.cells` | The graph: axial coordinate (`Vector2i(q, r)`) to an array of neighbouring coordinates. |
-| `MapGraph.WIDTH`, `HEIGHT` | 8 by 8 cells. |
 | `MapGraph.DIRECTIONS` | The six axial neighbour offsets. |
 | `MapGraph.to_axial()` | Turns a column and row into axial coordinates. The hexes are pointy-top (a vertex points up), and odd rows sit half a hex to the right, so the grid is a rectangle. |
-| `MapGraph.generate()` | Clears `cells`, creates all 64, and links each to the neighbours that exist. |
+| `MapGraph.generate(dimensions)` | Clears `cells`, creates `dimensions.x` columns by `dimensions.y` rows, and links each cell to the neighbours that exist. |
+| `RoundConfig.MapSize`, `MAP_DIMENSIONS` | Named map sizes and their columns by rows. `SMALL` is 74 by 46, Civilization's small map. |
+| `RoundConfig.map_size` | The chosen size, `SMALL` by default. Nothing in the menu sets it yet. |
+| `RoundConfig.get_map_dimensions()` | The dimensions of `map_size`, read by the `CreateMapGraph` step. |
 | `MapGraph.get_save_data()` | `{"cells": [[q, r], ...]}`. JSON cannot key on `Vector2i`, so cells are saved as pairs. Neighbours are not saved. |
 | `MapGraph.load_save_data()` | Clears `cells`, recreates each saved cell (the parser reads numbers as floats, so each is cast back to int), then runs `connect_neighbours()`. |
 | `MapConstructor.three_d` | The main scene's `3D` node. Tiles go under its `hex_tile_grid`. |
@@ -245,9 +247,9 @@ The map is split in two: a graph that holds the map's logical data for the whole
 | `TileFactory.HEX`, `HEX_2` | Paths of the two tile scenes in `Assets/Tiles/`. Every cell uses `HEX`; `HEX_2` is unused. |
 | `TileFactory.TILE_SIZE` | Centre to corner of a tile, 1.0. Measured from both `.glb` meshes: flat sides at x = ±0.866 (√3/2), corners bevelled to z = ±0.988. Corners point along Z. |
 | `TileFactory.to_position()` | Axial coordinate to tile centre on the XZ plane: x = size·√3·(q + r/2), z = size·1.5·r. Neighbours land √3 apart, so tiles touch edge to edge. Positions are taken relative to the grid's centre. |
-| `TileFactory.find_centre()` | The midpoint of the smallest box around every tile centre. `build()` subtracts it from each tile's position, so the map's centre sits on the origin of `HexTileGrid`. The 8 by 8 grid spans x −6.5 to 6.5 and z −5.25 to 5.25. |
+| `TileFactory.find_centre()` | The midpoint of the smallest box around every tile centre. `build()` subtracts it from each tile's position, so the map's centre sits on the origin of `HexTileGrid`. For the small map that is x −63.7 to 63.7 and z −33.75 to 33.75. |
 
-Edge cells have fewer neighbours: on the 8 by 8 grid, 36 cells have 6, and the rest have 2 to 5. The graph is saved under `map`, and a loaded game builds its tiles from the saved graph through the same `CreateMapConstructor` step.
+Edge cells have fewer neighbours: on the 74 by 46 small map (3404 cells), 3168 cells have 6, and the rest have 2 to 5. The map spans about 127 units in x and 67.5 in z. `MapConstructor` does not read the map size: it builds one tile per graph cell and centres them from the cells. A loaded game takes its size from the saved cells, not from `map_size`. The graph is saved under `map`, and a loaded game builds its tiles from the saved graph through the same `CreateMapConstructor` step.
 
 ## Playing round
 

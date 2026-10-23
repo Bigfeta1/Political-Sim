@@ -1,9 +1,9 @@
 [gd_scene load_steps=6 format=3 uid="uid://xdqeb1jx3ye2"]
 
-[ext_resource type="Script" path="res://Scripts/UI/MainMenu/Panels/LoadPanel/load_game_panel.gd" id="1_panel"]
-[ext_resource type="Script" path="res://Scripts/Logic/MainMenu/LoadPanel/save_entry_factory.gd" id="2_factory"]
-[ext_resource type="Script" path="res://Scripts/Logic/MainMenu/LoadPanel/save_selector.gd" id="3_selector"]
-[ext_resource type="Script" path="res://Scripts/UI/MainMenu/Panels/LoadPanel/load_button.gd" id="4_button"]
+[ext_resource type="Script" uid="uid://b5bwsi5gvxln1" path="res://Scripts/UI/MainMenu/Panels/LoadPanel/load_game_panel.gd" id="1_panel"]
+[ext_resource type="Script" uid="uid://bnmpluavih888" path="res://Scripts/Logic/MainMenu/LoadPanel/save_entry_factory.gd" id="2_factory"]
+[ext_resource type="Script" uid="uid://dre7k8eiqy8k6" path="res://Scripts/Logic/MainMenu/LoadPanel/save_selector.gd" id="3_selector"]
+[ext_resource type="Script" uid="uid://w5dg7ytecvjq" path="res://Scripts/UI/MainMenu/Panels/LoadPanel/load_button.gd" id="4_button"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
 font_size = 32
@@ -20,10 +20,17 @@ script = ExtResource("2_factory")
 script = ExtResource("3_selector")
 
 [node name="Panel" type="Panel" parent="."]
-offset_left = 176.0
-offset_top = 74.0
-offset_right = 976.0
-offset_bottom = 574.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -250.0
+offset_right = 400.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Panel"]
 layout_mode = 0

@@ -7,9 +7,10 @@ func run(configurator):
 	configurator.logic.add_child(map_graph)
 	configurator.logic.register("map_graph", map_graph)
 
-	var save_data = configurator.config.save_data
+	var config = configurator.config
+	var save_data = config.save_data
 
 	if not save_data.has("map"):
-		map_graph.generate()
+		map_graph.generate(config.get_map_dimensions())
 	else:
 		map_graph.load_save_data(save_data["map"])

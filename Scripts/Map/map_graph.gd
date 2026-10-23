@@ -1,8 +1,5 @@
 extends Node
 
-const WIDTH = 8
-const HEIGHT = 8
-
 const DIRECTIONS = [
 	Vector2i(1, 0),
 	Vector2i(1, -1),
@@ -14,10 +11,10 @@ const DIRECTIONS = [
 
 var cells := {}
 
-func generate() -> void:
+func generate(dimensions: Vector2i) -> void:
 	cells.clear()
 
-	create_cells()
+	create_cells(dimensions)
 	connect_neighbours()
 
 #region Saving
@@ -39,9 +36,9 @@ func load_save_data(data: Dictionary) -> void:
 #endregion
 
 #region Cells
-func create_cells() -> void:
-	for row in HEIGHT:
-		for column in WIDTH:
+func create_cells(dimensions: Vector2i) -> void:
+	for row in dimensions.y:
+		for column in dimensions.x:
 			cells[to_axial(column, row)] = []
 
 func to_axial(column: int, row: int) -> Vector2i:
