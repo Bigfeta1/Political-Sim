@@ -48,7 +48,7 @@ Every piece has one job, is handed what it needs, and is created and freed by th
 
 ## Main scene and the Logic registry
 
-`main_scene.tscn` holds a `StateRouter`, a `Logic` node that doubles as a registry of live systems, a `UI` control and a `Node3D`. On startup `main_scene.gd` calls `state_router.initialize(logic, ui)`.
+`main_scene.tscn` holds a `StateRouter`, a `Logic` node that doubles as a registry of live systems, a `UI` control and a `3D` node (`Node3D`). On startup `main_scene.gd` calls `state_router.initialize(logic, ui, three_d)`, where `three_d` is the `3D` node (`Scripts/3D/3d.gd`, which holds `hex_tile_grid`). The router passes it to the round configurator through `configurator.initialize(three_d)` right after adding it, before the steps run.
 
 `Logic` (`Scripts/MainScene/logic.gd`) keeps a `systems` dictionary and has four functions:
 
@@ -64,6 +64,7 @@ Every piece has one job, is handed what it needs, and is created and freed by th
 | `round_configurator` | Router, on `CONFIGURE_ROUND` | Router on `PLAYING_ROUND` |
 | `country_manager` | `CreateCountryManager` step | `logic.clear()` on `MAIN_MENU` |
 | `state_manager` | `CreateStateManager` step | `logic.clear()` on `MAIN_MENU` |
+| `map_graph` | `CreateMapGraph` step | `logic.clear()` on `MAIN_MENU` |
 | `playing_round` | Router, on `PLAYING_ROUND` | `logic.clear()` on `MAIN_MENU` |
 
 The UI side is not covered by `clear()`. The router keeps its own references to the main menu UI, the round config panel, the checklist UI and the playing round UI, and frees them itself.
@@ -86,7 +87,7 @@ Four things request a state change today: the BEGIN button and the LOAD button b
 
 What happens, in order:
 
-1. **Startup.** `main_scene.gd` calls `state_router.initialize(logic, ui)`, which runs the `MAIN_MENU` branch for the initial state.
+1. **Startup.** `main_scene.gd` calls `state_router.initialize(logic, ui, three_d)`, which runs the `MAIN_MENU` branch for the initial state.
 2. **Opening setup.** NEW GAME moves `MainMenuState` to `GAME_SETUP`, and LOAD GAME moves it to `LOAD_GAME`. The menu router adds the matching panel. The global state stays `MAIN_MENU`.
 3. **BEGIN or LOAD.** With a country (or a save) selected, the button requests `CONFIGURE_ROUND`. `GameState.change_state` sets the state and emits `state_changed`.
 4. **Configure.** The router frees the menu, then creates the round configurator and its checklist UI. The configurator builds the systems and the player's country.
@@ -147,8 +148,10 @@ The round configurator runs a list of steps in order, builds the systems a round
 | 2 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates the state manager (with `TurnManager` and `PhaseManager`) under `Logic` and registers it as `state_manager`. |
 | 3 | `CreatePlayerCountry` | `create_player_country_step.gd` | Creates the country whose id is `config.player_country_id` and sets its `is_player`. |
 | 4 | `CreatePlayers` | `create_players_step.gd` | Creates the opponents through the factory. With no save it picks `config.player_count - 1` random countries (never the player's); `player_count` is 3 and is not yet editable in the panel. With `config.save_data` it creates the saved non-player countries instead. |
-| 5 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
-| 6 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. Then `restore_countries` matches each country to its saved entry by `data.id` and calls `country.load_save_data`, which overwrites the base values from the JSON. |
+| 5 | `CreateMapGraph` | `create_map_graph_step.gd` | Instantiates `map_graph.tscn` under `Logic`, registers it as `map_graph` (it lasts into the playing round), and calls `generate()`. |
+| 6 | `CreateMapConstructor` | `create_map_constructor_step.gd` | Instantiates `map_constructor.tscn` under `Logic` without registering it, calls `initialize(configurator.three_d, map_graph)` and `construct()`, then removes and frees it. |
+| 7 | `SetTurnOrder` | `set_turn_order_step.gd` | Sorts the created countries by `country_initiative`, highest first (ties keep creation order), passes the order to `TurnManager.set_turn_order()`, then calls `next_turn()` so the top country is current. |
+| 8 | `RestoreSavedState` | `restore_saved_state_step.gd` | Does nothing unless `config.save_data` is set. Otherwise calls `load_save_data` on the state manager, phase manager and turn manager, which overwrites the order and index `SetTurnOrder` just set. Then `restore_countries` matches each country to its saved entry by `data.id` and calls `country.load_save_data`, which overwrites the base values from the JSON. |
 
 **How it runs.**
 
@@ -219,6 +222,31 @@ The factory also reads `Data/Mortality/mortality_<id>.json` into `country_mortal
 
 Godot's JSON parser reads every number as a float, so these values are floats. The labels format them for display.
 
+## Map
+
+The map is split in two: a graph that holds the map's logical data for the whole round, and a constructor that builds the tiles from it during setup and is then freed.
+
+- **`MapGraph`** (`map_graph.tscn`, `Scripts/Map/map_graph.gd`). Created by the `CreateMapGraph` step and registered as `map_graph`, so the playing round can read it with `logic.get_system("map_graph")`. `logic.clear()` frees it on `MAIN_MENU`.
+- **`MapConstructor`** (`map_constructor.tscn`, `Scripts/Map/map_constructor.gd`). Created by the `CreateMapConstructor` step, handed the `3D` node and the graph, run, then removed and freed by the same step. It is not registered. Its child `TileFactory` (`Scripts/Map/tile_factory.gd`) builds one tile per cell under `3D/HexTileGrid`.
+- **Tiles** stay under `3D/HexTileGrid` after the constructor is freed. `state_router.gd`'s `destroy_map()` frees them on `MAIN_MENU`. It runs at startup too, so any tile placed under `HexTileGrid` in the editor is freed before a round starts.
+
+| Symbol | Meaning |
+| --- | --- |
+| `MapGraph.cells` | The graph: axial coordinate (`Vector2i(q, r)`) to an array of neighbouring coordinates. |
+| `MapGraph.WIDTH`, `HEIGHT` | 8 by 8 cells. |
+| `MapGraph.DIRECTIONS` | The six axial neighbour offsets. |
+| `MapGraph.to_axial()` | Turns a column and row into axial coordinates. The hexes are pointy-top (a vertex points up), and odd rows sit half a hex to the right, so the grid is a rectangle. |
+| `MapGraph.generate()` | Clears `cells`, creates all 64, and links each to the neighbours that exist. |
+| `MapConstructor.three_d` | The main scene's `3D` node. Tiles go under its `hex_tile_grid`. |
+| `MapConstructor.map_graph` | The registered `MapGraph`, read to know which tiles to build. |
+| `MapConstructor.construct()` | Calls `tile_factory.build(map_graph.cells, three_d.hex_tile_grid)`. |
+| `TileFactory.HEX`, `HEX_2` | Paths of the two tile scenes in `Assets/Tiles/`. Every cell uses `HEX`; `HEX_2` is unused. |
+| `TileFactory.TILE_SIZE` | Centre to corner of a tile, 1.0. Measured from both `.glb` meshes: flat sides at x = ±0.866 (√3/2), corners bevelled to z = ±0.988. Corners point along Z. |
+| `TileFactory.to_position()` | Axial coordinate to tile centre on the XZ plane: x = size·√3·(q + r/2), z = size·1.5·r. Neighbours land √3 apart, so tiles touch edge to edge. Positions are taken relative to the grid's centre. |
+| `TileFactory.find_centre()` | The midpoint of the smallest box around every tile centre. `build()` subtracts it from each tile's position, so the map's centre sits on the origin of `HexTileGrid`. The 8 by 8 grid spans x −6.5 to 6.5 and z −5.25 to 5.25. |
+
+Edge cells have fewer neighbours: on the 8 by 8 grid, 36 cells have 6, and the rest have 2 to 5. The graph is not saved.
+
 ## Playing round
 
 The playing round does not own its systems. It is a thin scene that receives the country manager, and its UI is wired to the state manager the configurator already built.
@@ -237,8 +265,24 @@ The playing round does not own its systems. It is a thin scene that receives the
 
 A new number format is a new `Format` value and a branch in `format_value`. The symbols are a placeholder for icon images.
 - **Demographics panel.** The side panel's `DemographicsButton` sets `MenuStateManager` to `DEMOGRAPHICS`, and `round_state_router.gd` creates `Scenes/PlayingRound/Panels/demographics_panel.tscn` under the UI's `Panels` and calls `initialize(player_country, menu_state_manager)`. The router gets the country manager from `event_coordinators.gd`. Pressing the button again, or the panel's X (`close_button.gd`, which `demographics_panel.gd` hands the `MenuStateManager`), sets `STANDBY`, and the router frees the panel. Inside `Panel/CountryScroll/CountryList`, `demographics_panel.gd` hands the country to three views in `Scripts/UI/PlayingRound/Panels/Demographics/`: `demographics_summary.gd` (name, life expectancy and target, population), `population_table.gd` (population and share per age band, with a bar scaled to the largest band) and `life_table_view.gd` (m, q, l and L per band from `LifeExpectancy.life_table()`, then years before 70, share reaching 70, years remaining at 70 next to the flat-rate value, and e0). The life table view also shows a key explaining n, m(x), q(x), l(x) and L(x), and a totals grid with a note for each figure. All three build their cells with `table_cell.gd` (header, value and note labels). They redraw on `population_count_changed` and `life_expectancy_changed`. All numbers come from the country's nodes; the views only compute each band's share of the total and format values.
-- **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
+- **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) holds `camera`, the main scene's `3D/Camera3D`: the router passes `three_d` to `playing_round.initialize(...)`, which calls `input_handler.initialize(three_d.camera, three_d.get_tile_bounds())`. WASD moves the camera (see Camera movement). It handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
 - **Teardown.** The router frees the UI on `MAIN_MENU`. `logic.clear()` frees the playing round logic, the country manager and the state manager together.
+
+### Camera movement
+
+`playing_round_input.gd` moves the camera in `_process` while W, A, S or D is held. The camera only moves, never turns, and the movement is clamped so the point it looks at stays over the tiles.
+
+| Symbol | Meaning |
+| --- | --- |
+| `3d.gd` `get_tile_bounds()` | The smallest rectangle on the ground (x, z) that holds every tile centre under `HexTileGrid`. Read once when the playing round starts, after the map constructor has built the tiles. |
+| `CAMERA_SPEED` | Units per second, 10. |
+| `bounds` | The tile bounds passed in on initialize. |
+| `focus_offset` | Camera position minus the ground point (y = 0) at the centre of its view, measured once on initialize. The camera keeps this offset, so its height and angle never change. |
+| `move_camera()` | Moves the ground point, clamps it to `bounds`, and puts the camera back at that point plus `focus_offset`. Diagonals are normalised, so they are not faster. |
+| `read_direction()` | W and S move along the camera's facing, flattened onto the ground; D and A along its right. Read from the camera's rotation, so they follow it if the camera is turned in the editor. |
+| `find_focus()` | Where the camera's centre line meets the ground plane y = 0. Returns null if the camera does not point down, and `initialize` would then fail. |
+
+The bounds use tile centres, so the view can centre on an edge tile but not go past it. The keys are raw keycodes, like F5 and Alt; the project has no input actions.
 
 ## Turn and phase system
 

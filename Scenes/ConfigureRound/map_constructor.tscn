@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://co8e2b6fvyafd"]
+
+[ext_resource type="Script" path="res://Scripts/Map/map_constructor.gd" id="1_map"]
+[ext_resource type="Script" path="res://Scripts/Map/tile_factory.gd" id="2_factory"]
+
+[node name="MapConstructor" type="Node"]
+script = ExtResource("1_map")
+
+[node name="TileFactory" type="Node" parent="."]
+script = ExtResource("2_factory")

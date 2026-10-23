@@ -6,6 +6,11 @@ signal all_completed
 @onready var logic = get_parent()
 @onready var config = logic.get_system("round_config")
 
+var three_d
+
+func initialize(three_d_reference):
+	three_d = three_d_reference
+
 func _ready() -> void:
 	all_completed.connect(_on_all_completed)
 	run_steps.call_deferred()

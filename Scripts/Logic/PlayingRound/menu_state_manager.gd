@@ -4,6 +4,7 @@ class_name MenuStateManager
 enum MenuState {
 	STANDBY,
 	DEMOGRAPHICS,
+	
 }
 
 var current_menu_state: MenuState = MenuState.STANDBY

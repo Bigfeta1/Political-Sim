@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://bb5m6fn8raaa5"]
+[gd_scene load_steps=5 format=3 uid="uid://bb5m6fn8raaa5"]
 
 [ext_resource type="Script" uid="uid://cngo4qtjt0spd" path="res://Scripts/MainScene/main_scene.gd" id="1_x6ack"]
 [ext_resource type="Script" uid="uid://vqyt2am72j8j" path="res://Scripts/Logic/state_router.gd" id="3_b48ew"]
+[ext_resource type="Script" uid="uid://kaps7gs0vwpk" path="res://Scripts/3D/3d.gd" id="4_iacmt"]
 [ext_resource type="Script" uid="uid://b8ssa1l3bgxb4" path="res://Scripts/MainScene/logic.gd" id="4_logic"]
 
 [node name="MainScene" type="Node"]
@@ -21,4 +22,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Node3D" type="Node3D" parent="."]
+[node name="3D" type="Node3D" parent="."]
+script = ExtResource("4_iacmt")
+
+[node name="Camera3D" type="Camera3D" parent="3D"]
+transform = Transform3D(1, 0, 0, 0, 0.38268343, 0.9238795, 0, -0.9238795, 0.38268343, 0, 3.8704584, 0)
+
+[node name="Lighting" type="Node3D" parent="3D/Camera3D"]
+transform = Transform3D(1, 0, 0, 0, 0.38268346, -0.9238795, 0, 0.92387956, 0.38268346, 0, -1.4811604, -3.5758374)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="3D/Camera3D/Lighting"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4070206, 0)
+
+[node name="HexTileGrid" type="Node3D" parent="3D"]

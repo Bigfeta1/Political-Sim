@@ -81,7 +81,7 @@ script = ExtResource("5_public_image")
 
 [node name="Production" type="Node" parent="Parameters"]
 
-[node name="Factions" type="Node" parent="Parameters"]
+[node name="Legal" type="Node" parent="Parameters"]
 
-[connection signal="mortality_changed" from="Parameters/Population/Mortality" to="Parameters/Population/LifeExpectancy" method="_on_mortality_changed"]
 [connection signal="mortality_changed" from="Parameters/Population/Mortality" to="Parameters/Population/Count" method="_on_mortality_changed"]
+[connection signal="mortality_changed" from="Parameters/Population/Mortality" to="Parameters/Population/LifeExpectancy" method="_on_mortality_changed"]

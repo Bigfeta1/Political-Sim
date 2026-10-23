@@ -7,6 +7,8 @@ var ui
 var main_menu_ui_instance: Node = null
 const MAIN_MENU_UI = "res://Scenes/MainMenu/Core/main_menu_ui.tscn"
 
+var three_d
+
 #RoundConfigurator
 const ROUND_CONFIGURATOR = "res://Scenes/ConfigureRound/round_configurator_logic.tscn"
 
@@ -28,9 +30,10 @@ var phase_manager
 func _ready() -> void:
 	GameState.state_changed.connect(_on_state_changed)
 
-func initialize(logic_reference, ui_reference):
+func initialize(logic_reference, ui_reference, three_d_reference):
 	logic = logic_reference
 	ui = ui_reference
+	three_d = three_d_reference
 
 	_on_state_changed(GameState.current_state)
 
@@ -42,6 +45,7 @@ func _on_state_changed(new_state):
 			logic.clear()
 			create_main_menu()
 			destroy_playing_round()
+			destroy_map()
 
 		GameState.State.CONFIGURE_ROUND:
 			destroy_main_menu()
@@ -87,6 +91,7 @@ func create_round_configurator():
 	var configurator = SceneLoader.instantiate(ROUND_CONFIGURATOR)
 	logic.add_child(configurator)
 	logic.register("round_configurator", configurator)
+	configurator.initialize(three_d)
 
 	round_configurator_ui_instance = SceneLoader.instantiate(ROUND_CONFIGURATOR_UI)
 	ui.add_child(round_configurator_ui_instance)
@@ -101,6 +106,12 @@ func destroy_round_configurator():
 	round_configurator_ui_instance.queue_free()
 	round_configurator_ui_instance = null
 
+#endregion
+
+#region MAP
+func destroy_map():
+	for tile in three_d.hex_tile_grid.get_children():
+		tile.queue_free()
 #endregion
 
 #region PLAYING ROUND
@@ -125,7 +136,7 @@ func create_playing_round():
 	playing_round_ui_instance = SceneLoader.instantiate(PLAYING_ROUND_UI)
 	ui.add_child(playing_round_ui_instance)
 
-	playing_round.initialize(logic.get_system("country_manager"), state_manager, playing_round_ui_instance)
+	playing_round.initialize(logic.get_system("country_manager"), state_manager, playing_round_ui_instance, three_d)
 
 	var player_country = logic.get_system("country_manager").get_player_country()
 	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager, player_country)

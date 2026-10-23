@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://eoj2i8vf3fp6" path="res://Scripts/Map/map_graph.gd" id="1_graph"]
+
+[node name="MapGraph" type="Node"]
+script = ExtResource("1_graph")
