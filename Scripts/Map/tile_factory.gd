@@ -1,6 +1,8 @@
 extends Node
 
 const MapCell = preload("res://Scripts/Map/map_cell.gd")
+const WaterDataTexture = preload("res://Scripts/Map/water_data_texture.gd")
+const WATER_MATERIAL = preload("res://Assets/Shaders/water_tile_material.tres")
 
 const TERRAIN_TILES = {
 	MapCell.Terrain.LAND: "res://Scenes/Map/Tiles/land_tile.tscn",
@@ -11,9 +13,16 @@ const TILE_SIZE = 1.0
 
 func build(cells: Dictionary, hex_tile_grid: Node3D) -> void:
 	var centre = find_centre(cells)
+	configure_water(cells, centre)
 
 	for cell in cells.values():
 		hex_tile_grid.add_child(create_tile(cell, centre))
+
+func configure_water(cells: Dictionary, centre: Vector3) -> void:
+	WATER_MATERIAL.set_shader_parameter("map_data", WaterDataTexture.build(cells))
+	WATER_MATERIAL.set_shader_parameter("map_origin", Vector2(WaterDataTexture.find_origin(cells)))
+	WATER_MATERIAL.set_shader_parameter("map_centre", Vector2(centre.x, centre.z))
+	WATER_MATERIAL.set_shader_parameter("max_coast_distance", float(WaterDataTexture.MAX_COAST_DISTANCE))
 
 func create_tile(cell, centre: Vector3) -> Node3D:
 	var tile = SceneLoader.instantiate(TERRAIN_TILES[cell.terrain])
