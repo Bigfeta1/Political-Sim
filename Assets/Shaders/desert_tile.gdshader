@@ -46,10 +46,15 @@ uniform float region_wave = 0.3;
 uniform float region_wave_scale = 2.5;
 
 uniform sampler2D desert_ergs : filter_nearest, repeat_disable;
-uniform float erg_scale = 0.2;
-uniform float erg_turn = 0.8;
-uniform float erg_blend = 0.12;
-uniform float erg_coverage = 0.6;
+uniform float erg_height = 0.35;
+uniform float erg_floor_tone = 0.35;
+uniform float draa_frequency = 0.3;
+uniform float draa_width = 0.65;
+uniform float draa_meander = 1.2;
+uniform float draa_segment_scale = 0.15;
+uniform float superposed_share = 0.25;
+uniform float superposed_turn = 0.35;
+uniform float superposed_meander = 0.25;
 
 varying vec3 world_position;
 
@@ -123,55 +128,45 @@ float dune_profile(float phase) {
 	return mix(ramp * (2.0 - ramp), ramp * ramp, crest_sharpness);
 }
 
-float field_shape(vec2 point, vec2 wind, float frequency, float coverage) {
+float field_shape(vec2 point, vec2 wind, float frequency, float coverage, float meander_strength) {
 	vec2 wind_space = to_wind_space(point, wind);
-	float meander = (fbm(vec2(wind_space.y * 0.35, wind_space.x * 0.12)) - 0.5) * 2.0 * dune_meander;
+	float meander = (fbm(vec2(wind_space.y * 0.35, wind_space.x * 0.12)) - 0.5) * 2.0 * meander_strength;
 	float phase = fract((wind_space.x + meander) * frequency);
 	float amplitude = mix(coverage, 1.0, smoothstep(0.2, 0.5, fbm(point * 0.25 + vec2(7.1, 2.9))));
 	return dune_profile(phase) * amplitude;
 }
 
-float erg_cell(vec2 point, out vec2 nearest_site) {
-	vec2 scaled = point * erg_scale;
-	vec2 cell = floor(scaled);
-	vec2 local = fract(scaled);
-	float nearest = 8.0;
-	float second = 8.0;
-	nearest_site = cell;
-
-	for (int y = -1; y <= 1; y++) {
-		for (int x = -1; x <= 1; x++) {
-			vec2 offset = vec2(float(x), float(y));
-			float distance_to_site = length(offset + hash2(cell + offset + vec2(71.0, 29.0)) - local);
-			if (distance_to_site < nearest) {
-				second = nearest;
-				nearest = distance_to_site;
-				nearest_site = cell + offset;
-			} else if (distance_to_site < second) {
-				second = distance_to_site;
-			}
-		}
-	}
-	return second - nearest;
+float draa_profile(float ridge) {
+	float ramp = ridge < windward_share ? ridge / windward_share : (1.0 - ridge) / (1.0 - windward_share);
+	return smoothstep(0.0, 1.0, ramp);
 }
 
-float erg_field(vec2 point, vec2 wind, float frequency, vec2 site) {
-	float angle = (hash(site + vec2(3.0, 91.0)) - 0.5) * 2.0 * erg_turn;
-	float erg_frequency = frequency * mix(0.8, 1.25, hash(site + vec2(53.0, 7.0)));
-	return field_shape(point, rotate(wind, angle), erg_frequency, erg_coverage);
+float draa_shape(vec2 point, vec2 wind, out float flank) {
+	vec2 wind_space = to_wind_space(point, wind);
+	float bend = (fbm(vec2(wind_space.y * 0.12, wind_space.x * 0.05)) - 0.5) * 2.0 * draa_meander;
+	float along = (wind_space.x + bend) * draa_frequency;
+	float ridge_index = floor(along);
+	float ridge = clamp(fract(along) / draa_width, 0.0, 1.0);
+
+	float segment = smoothstep(0.35, 0.6, value_noise(vec2(wind_space.y * draa_segment_scale, ridge_index * 7.3)));
+	float height = mix(0.6, 1.0, value_noise(vec2(wind_space.y * draa_segment_scale * 0.5, ridge_index * 7.3 + 50.0)));
+
+	flank = smoothstep(0.05, 0.2, ridge) * (1.0 - smoothstep(windward_share - 0.2, windward_share - 0.05, ridge)) * segment;
+	return draa_profile(ridge) * segment * height;
 }
 
 float erg_shape(vec2 point, vec2 wind, float frequency) {
-	vec2 site;
-	float border = smoothstep(0.0, erg_blend, erg_cell(point, site));
-	return erg_field(point, wind, frequency, site) * border;
+	float flank;
+	float draa = draa_shape(point, wind, flank);
+	float superposed = field_shape(point, rotate(wind, superposed_turn), frequency, 1.0, superposed_meander);
+	return draa * (1.0 - superposed_share) + superposed * flank * superposed_share;
 }
 
 float dune_shape(vec2 point, vec2 wind, float frequency, float ergs) {
 	if (ergs > 0.5) {
 		return erg_shape(point, wind, frequency);
 	}
-	return field_shape(point, wind, frequency, 0.0);
+	return field_shape(point, wind, frequency, 0.0, dune_meander);
 }
 
 float ripple_shape(vec2 point, vec2 wind) {
@@ -180,7 +175,7 @@ float ripple_shape(vec2 point, vec2 wind) {
 }
 
 float surface_height(vec2 point, vec2 wind, float frequency, float ergs, float sand, float ripple_fade) {
-	float dunes = dune_shape(point, wind, frequency, ergs) * dune_height;
+	float dunes = dune_shape(point, wind, frequency, ergs) * (ergs > 0.5 ? erg_height : dune_height);
 	float ripples = ripple_shape(point, wind) * ripple_height * ripple_fade;
 	return (dunes + ripples) * sand;
 }
@@ -292,7 +287,9 @@ void fragment() {
 	float crack = crack_distance(point * crack_scale);
 	float crack_blur = fwidth(crack);
 	float crack_line = 1.0 - smoothstep(crack_width - crack_blur, crack_width + crack_blur, crack);
-	vec3 desert_albedo = style_albedo(point, dune_shape(point, wind, frequency, chosen_ergs), rock, tint, crack_line);
+	float dune = dune_shape(point, wind, frequency, chosen_ergs);
+	float dune_tone = chosen_ergs > 0.5 ? mix(erg_floor_tone, 1.0, dune) : dune;
+	vec3 desert_albedo = style_albedo(point, dune_tone, rock, tint, crack_line);
 
 	vec2 grain = point * sparkle_scale;
 	vec2 grain_cell = floor(grain);
