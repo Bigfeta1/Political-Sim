@@ -1,14 +1,32 @@
-[gd_scene load_steps=4 format=3 uid="uid://doqpl6qv8n4ly"]
+[gd_scene load_steps=10 format=3 uid="uid://doqpl6qv8n4ly"]
 
-[ext_resource type="Script" uid="uid://cbn3xyofkssdf" path="res://Scripts/MainMenu/Panels/begin_button.gd" id="1_4hhl4"]
+[ext_resource type="Script" uid="uid://o68lhplth3hb" path="res://Scripts/UI/PlayingRound/Panels/Demographics/demographics_panel.gd" id="1_panel"]
+[ext_resource type="Script" uid="uid://bhs8disk2kmdx" path="res://Scripts/UI/PlayingRound/Panels/Demographics/demographics_summary.gd" id="2_summary"]
+[ext_resource type="Script" uid="uid://difuc777hl3r7" path="res://Scripts/UI/PlayingRound/Panels/Demographics/population_table.gd" id="3_population"]
+[ext_resource type="Script" uid="uid://d3dnkikoaf6n3" path="res://Scripts/UI/PlayingRound/Panels/Demographics/life_table_view.gd" id="4_life_table"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hhl4"]
 bg_color = Color(0.01773239, 0.017732395, 0.017732374, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="LabelSettings" id="LabelSettings_kgrr2"]
 font_size = 32
 
+[sub_resource type="LabelSettings" id="LabelSettings_section"]
+font_size = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_country"]
+font_size = 18
+
+[sub_resource type="LabelSettings" id="LabelSettings_legend"]
+font_size = 14
+font_color = Color(0.55, 0.55, 0.55, 1)
+
 [node name="DemographicsPanel" type="Node"]
+script = ExtResource("1_panel")
 
 [node name="Logic" type="Node" parent="."]
 
@@ -43,18 +61,58 @@ offset_bottom = 480.0
 [node name="CountryList" type="VBoxContainer" parent="Panel/CountryScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 10
 
-[node name="BeginButton" type="Button" parent="Panel"]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 31.0
-offset_right = 163.0
-offset_bottom = 49.0
-grow_horizontal = 0
-grow_vertical = 0
-text = "BEGIN"
-script = ExtResource("1_4hhl4")
+[node name="Summary" type="Label" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+label_settings = SubResource("LabelSettings_country")
+script = ExtResource("2_summary")
+
+[node name="PopulationSpacer" type="Control" parent="Panel/CountryScroll/CountryList"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="PopulationTitle" type="Label" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+text = "POPULATION BY AGE"
+label_settings = SubResource("LabelSettings_section")
+
+[node name="PopulationSeparator" type="HSeparator" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+
+[node name="PopulationTable" type="GridContainer" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+columns = 4
+script = ExtResource("3_population")
+
+[node name="LifeTableSpacer" type="Control" parent="Panel/CountryScroll/CountryList"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="LifeTableTitle" type="Label" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+text = "LIFE TABLE"
+label_settings = SubResource("LabelSettings_section")
+
+[node name="LifeTableSeparator" type="HSeparator" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+
+[node name="LifeTable" type="VBoxContainer" parent="Panel/CountryScroll/CountryList"]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("4_life_table")
+
+[node name="Rows" type="GridContainer" parent="Panel/CountryScroll/CountryList/LifeTable"]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+columns = 6
+
+[node name="Legend" type="Label" parent="Panel/CountryScroll/CountryList/LifeTable"]
+layout_mode = 2
+label_settings = SubResource("LabelSettings_legend")
+
+[node name="Totals" type="GridContainer" parent="Panel/CountryScroll/CountryList/LifeTable"]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+columns = 3

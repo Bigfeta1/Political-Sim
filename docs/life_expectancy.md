@@ -55,7 +55,9 @@ The script carries no comments. What each part is for lives here.
 | `target_life_expectancy` | The country's real life expectancy at birth. The open band is calibrated so the life table reproduces it. |
 | `calibrate()` | A flat death rate over the open band overstates the years lived in it, so the band takes the years that reproduce the target. |
 | `calculate()` | Years lived in the open band scale inversely with its death rate. |
-| `life_table()` | Years lived before the open band and the share of people who reach it, for one person at birth. |
+| `life_table()` | Returns `rows` (one per closed band: `band`, `rate` m, `dying` q, `survivors` l at the band's start, `years` L), `years` (ΣL, years lived before the open band) and `survivors` (share reaching the open band), for one person at birth. |
+| `open_band_years()` | Years remaining at the start of the open band now: the calibrated years scaled by start rate ÷ current rate. |
+| `flat_open_band_years()` | Years remaining at the start of the open band under a single flat rate (1/m). Shown for comparison only; the engine does not use it. |
 
 ## `mortality.gd` by symbol
 
