@@ -5,5 +5,6 @@ extends Node
 
 func initialize(country_manager, state_mngr, playing_round_ui, three_d):
 	event_coordinators.initialize(country_manager, state_mngr, playing_round_ui)
-	input_handler.initialize(three_d.camera, three_d.get_tile_bounds())
+	three_d.camera.initialize(three_d.get_tile_bounds())
+	input_handler.initialize(three_d.camera)
 	

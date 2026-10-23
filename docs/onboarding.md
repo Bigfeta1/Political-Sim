@@ -232,19 +232,26 @@ The map is split in two: a graph that holds the map's logical data for the whole
 
 | Symbol | Meaning |
 | --- | --- |
-| `MapGraph.cells` | The graph: axial coordinate (`Vector2i(q, r)`) to an array of neighbouring coordinates. |
+| `MapGraph.cells` | The graph: axial coordinate (`Vector2i(q, r)`) to that cell's `MapCell`. |
+| `MapCell` (`Scripts/Map/map_cell.gd`) | One cell's logical data: `coordinate`, `terrain` and `neighbours` (the coordinates of the cells next to it). A `RefCounted`, not a node, so thousands of cells cost no scene tree nodes. `map_graph.gd` preloads it. |
+| `MapCell.Terrain` | `LAND` or `WATER`. `terrain` is typed `int`, since an enum value is an `int`. |
+| `MapGraph.LAND_SHARE` | Chance of a cell being land, 0.29, roughly Earth's share of land. |
+| `MapGraph.pick_terrain()` | Random terrain per cell, independently. A placeholder: the aim is to recreate Earth. |
 | `MapGraph.DIRECTIONS` | The six axial neighbour offsets. |
 | `MapGraph.to_axial()` | Turns a column and row into axial coordinates. The hexes are pointy-top (a vertex points up), and odd rows sit half a hex to the right, so the grid is a rectangle. |
 | `MapGraph.generate(dimensions)` | Clears `cells`, creates `dimensions.x` columns by `dimensions.y` rows, and links each cell to the neighbours that exist. |
 | `RoundConfig.MapSize`, `MAP_DIMENSIONS` | Named map sizes and their columns by rows. `SMALL` is 74 by 46, Civilization's small map. |
 | `RoundConfig.map_size` | The chosen size, `SMALL` by default. Nothing in the menu sets it yet. |
 | `RoundConfig.get_map_dimensions()` | The dimensions of `map_size`, read by the `CreateMapGraph` step. |
-| `MapGraph.get_save_data()` | `{"cells": [[q, r], ...]}`. JSON cannot key on `Vector2i`, so cells are saved as pairs. Neighbours are not saved. |
-| `MapGraph.load_save_data()` | Clears `cells`, recreates each saved cell (the parser reads numbers as floats, so each is cast back to int), then runs `connect_neighbours()`. |
+| `MapGraph.get_save_data()` | `{"cells": [[q, r, terrain], ...]}`. JSON cannot key on `Vector2i`, so cells are saved as arrays. Neighbours are not saved. |
+| `MapGraph.load_save_data()` | Clears `cells`, recreates each saved cell with its terrain (the parser reads numbers as floats, so each is cast back to int), then runs `connect_neighbours()`. |
 | `MapConstructor.three_d` | The main scene's `3D` node. Tiles go under its `hex_tile_grid`. |
 | `MapConstructor.map_graph` | The registered `MapGraph`, read to know which tiles to build. |
 | `MapConstructor.construct()` | Calls `tile_factory.build(map_graph.cells, three_d.hex_tile_grid)`. |
-| `TileFactory.HEX`, `HEX_2` | Paths of the two tile scenes in `Assets/Tiles/`. Every cell uses `HEX`; `HEX_2` is unused. |
+| `TileFactory.TERRAIN_TILES` | Terrain (`MapCell.Terrain`) to tile scene path. `create_tile()` instantiates the scene for the cell's terrain. |
+| Tile scenes (`Scenes/Map/Tiles/`) | `tile.tscn` is the base: a `Node3D` with `Scripts/Map/Tiles/tile.gd` and no model. `land_tile.tscn` and `water_tile.tscn` inherit it, each add an instance of `Assets/Tiles/Hex.glb`, and each set `material` to their own `ShaderMaterial` (`Assets/Shaders/<type>_tile_material.tres`, using `<type>_tile.gdshader`). In `_ready()`, `tile.gd` sets `material_override` on every `MeshInstance3D` under the tile to `material`, so the scenes do not depend on the model's node names and survive re-importing the `.glb`. One material resource is shared by every tile of a type. `Hex2.glb`, the taller hex, is meant for mountains later and is unused. A new terrain is a `MapCell.Terrain` value, a scene inheriting `tile.tscn`, and an entry in `TERRAIN_TILES`. |
+| `water_tile.gdshader` | Blends `deep_colour` and `shallow_colour` by two crossed sine waves over world x and z that move with `TIME`, so the colour drifts across tiles. Low roughness, so it reflects the light. Tunable: `wave_scale`, `wave_speed`. |
+| `land_tile.gdshader` | Blends `grass_colour` and `dry_colour` by smooth value noise over world x and z, so neighbouring land tiles join into patches. Rough, so it does not shine. Tunable: `variation_scale`. |
 | `TileFactory.TILE_SIZE` | Centre to corner of a tile, 1.0. Measured from both `.glb` meshes: flat sides at x = ±0.866 (√3/2), corners bevelled to z = ±0.988. Corners point along Z. |
 | `TileFactory.to_position()` | Axial coordinate to tile centre on the XZ plane: x = size·√3·(q + r/2), z = size·1.5·r. Neighbours land √3 apart, so tiles touch edge to edge. Positions are taken relative to the grid's centre. |
 | `TileFactory.find_centre()` | The midpoint of the smallest box around every tile centre. `build()` subtracts it from each tile's position, so the map's centre sits on the origin of `HexTileGrid`. For the small map that is x −63.7 to 63.7 and z −33.75 to 33.75. |
@@ -269,24 +276,38 @@ The playing round does not own its systems. It is a thin scene that receives the
 
 A new number format is a new `Format` value and a branch in `format_value`. The symbols are a placeholder for icon images.
 - **Demographics panel.** The side panel's `DemographicsButton` sets `MenuStateManager` to `DEMOGRAPHICS`, and `round_state_router.gd` creates `Scenes/PlayingRound/Panels/demographics_panel.tscn` under the UI's `Panels` and calls `initialize(player_country, menu_state_manager)`. The router gets the country manager from `event_coordinators.gd`. Pressing the button again, or the panel's X (`close_button.gd`, which `demographics_panel.gd` hands the `MenuStateManager`), sets `STANDBY`, and the router frees the panel. Inside `Panel/CountryScroll/CountryList`, `demographics_panel.gd` hands the country to three views in `Scripts/UI/PlayingRound/Panels/Demographics/`: `demographics_summary.gd` (name, life expectancy and target, population), `population_table.gd` (population and share per age band, with a bar scaled to the largest band) and `life_table_view.gd` (m, q, l and L per band from `LifeExpectancy.life_table()`, then years before 70, share reaching 70, years remaining at 70 next to the flat-rate value, and e0). The life table view also shows a key explaining n, m(x), q(x), l(x) and L(x), and a totals grid with a note for each figure. All three build their cells with `table_cell.gd` (header, value and note labels). They redraw on `population_count_changed` and `life_expectancy_changed`. All numbers come from the country's nodes; the views only compute each band's share of the total and format values.
-- **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) holds `camera`, the main scene's `3D/Camera3D`: the router passes `three_d` to `playing_round.initialize(...)`, which calls `input_handler.initialize(three_d.camera, three_d.get_tile_bounds())`. WASD moves the camera (see Camera movement). It handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
+- **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) holds `camera`, the main scene's `3D/Camera3D`: the router passes `three_d` to `playing_round.initialize(...)`, which calls `three_d.camera.initialize(three_d.get_tile_bounds())` and then `input_handler.initialize(three_d.camera)`. WASD moves the camera and the mouse wheel zooms it (see Camera). It handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
 - **Teardown.** The router frees the UI on `MAIN_MENU`. `logic.clear()` frees the playing round logic, the country manager and the state manager together.
 
-### Camera movement
+### Camera
 
-`playing_round_input.gd` moves the camera in `_process` while W, A, S or D is held. The camera only moves, never turns, and the movement is clamped so the point it looks at stays over the tiles.
+`3D/Camera3D` has its own script, `Scripts/3D/camera.gd`, which places the camera from a ground point it looks at (`focus`) and a zoom level. `playing_round_input.gd` reads the keys and the wheel and calls the camera; it does not move the camera itself.
+
+**Zoom.** Wheel up zooms in, wheel down zooms out, one `ZOOM_STEP` per notch. `zoom` runs from 0 to 1:
+
+- **0, fully in:** the camera as placed in `main_scene.tscn`, 67.5° down, about 4.2 units from the ground point. This is also the default.
+- **1, fully out:** straight down over the centre of the map, high enough that every tile is in view.
+- **In between:** the pitch turns evenly from the scene's angle to straight down, the distance grows by the same factor each step, and the point looked at slides from `focus` towards the map's centre.
+
+Checked in Godot 4.5.1 headless (2026-10-23) on the small map's bounds: at zoom 0 the camera keeps its scene position and angle. At zoom 1 in a 1920 by 1080 viewport it sits 47.4 units up, and the map's outer tile corners land 1.5 px from the left and right edges and 24 px from the top and bottom. Not yet checked by running the game.
 
 | Symbol | Meaning |
 | --- | --- |
 | `3d.gd` `get_tile_bounds()` | The smallest rectangle on the ground (x, z) that holds every tile centre under `HexTileGrid`. Read once when the playing round starts, after the map constructor has built the tiles. |
-| `CAMERA_SPEED` | Units per second, 10. |
-| `bounds` | The tile bounds passed in on initialize. |
-| `focus_offset` | Camera position minus the ground point (y = 0) at the centre of its view, measured once on initialize. The camera keeps this offset, so its height and angle never change. |
-| `move_camera()` | Moves the ground point, clamps it to `bounds`, and puts the camera back at that point plus `focus_offset`. Diagonals are normalised, so they are not faster. |
-| `read_direction()` | W and S move along the camera's facing, flattened onto the ground; D and A along its right. Read from the camera's rotation, so they follow it if the camera is turned in the editor. |
-| `find_focus()` | Where the camera's centre line meets the ground plane y = 0. Returns null if the camera does not point down, and `initialize` would then fail. |
+| `camera.gd` `_ready()` | Records the zoomed-in view from the scene: `close_pitch` (the camera's x rotation) and `close_distance` (camera to the ground point at the centre of its view), and sets `focus` to that ground point. |
+| `camera.gd` `initialize(bounds)` | Stores the tile bounds and places the camera. Called each round, so `focus` and `zoom` carry over from the previous round, as the camera position did before. |
+| `ZOOM_STEP` | Zoom change per wheel notch, 0.1, so 10 notches from fully in to fully out. |
+| `TOP_DOWN_PITCH` | −90°, straight down. |
+| `zoom_in()`, `zoom_out()`, `set_zoom()` | Change `zoom`, clamped to 0..1, and place the camera. |
+| `far_distance()` | Height at which the tile bounds, grown by `TileFactory.TILE_SIZE` so whole tiles fit, fill the view when looking straight down. Takes the larger of the fit for depth (vertical field of view, `fov`) and for width (`fov` times the viewport's aspect). Assumes the camera's default `keep_aspect` (keep height). Read each time the camera is placed, so it follows window resizes on the next zoom or move. |
+| `pan(offset)` | Moves `focus` by `offset` and places the camera. |
+| `place()` | Clamps `focus` to the bounds, sets the pitch to `lerp(close_pitch, TOP_DOWN_PITCH, zoom)`, takes the point looked at as `focus` blended towards the bounds' centre by `zoom`, and puts the camera `close_distance · (far_distance / close_distance)^zoom` back from it along its view. |
+| `CAMERA_SPEED` | In `playing_round_input.gd`. Units per second, 10, at every zoom level. |
+| `read_zoom()` | In `playing_round_input.gd`. Wheel up calls `zoom_in()`, wheel down `zoom_out()`. |
+| `move_camera()` | In `playing_round_input.gd`. Calls `camera.pan()` with the held direction times speed and frame time. Diagonals are normalised, so they are not faster. |
+| `read_direction()` | In `playing_round_input.gd`. D and A move along the camera's right, flattened onto the ground; W and S along the ground direction 90° from it (`Vector3.UP.cross(right)`). Taken from the right axis because the facing points straight down at zoom 1 and has no ground direction there. |
 
-The bounds use tile centres, so the view can centre on an edge tile but not go past it. The keys are raw keycodes, like F5 and Alt; the project has no input actions.
+The bounds use tile centres, so the view can centre on an edge tile but not go past it. Because the point looked at slides towards the centre as `zoom` rises, WASD moves the view less the further out it is, and not at all at zoom 1. A full-screen `Control` with the default mouse filter does not stop wheel events from reaching `_unhandled_input` (checked headless in Godot 4.5.1). Whether scrolling over the demographics panel also zooms has not been checked. The keys are raw keycodes, like F5 and Alt; the project has no input actions.
 
 ## Turn and phase system
 

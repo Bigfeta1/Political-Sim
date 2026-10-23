@@ -3,18 +3,18 @@ extends Node
 const CAMERA_SPEED = 10.0
 
 var camera
-var bounds: Rect2
-var focus_offset: Vector3
 
-func initialize(camera_reference, bounds_reference: Rect2):
+func initialize(camera_reference):
 	camera = camera_reference
-	bounds = bounds_reference
-	focus_offset = camera.global_position - find_focus()
 
 func _process(delta: float) -> void:
 	move_camera(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		read_zoom(event)
+		return
+
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 
@@ -27,20 +27,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameState.state_change_requested.emit(GameState.State.MAIN_MENU)
 
 #region Camera
+func read_zoom(event: InputEventMouseButton) -> void:
+	if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		camera.zoom_in()
+		get_viewport().set_input_as_handled()
+	elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		camera.zoom_out()
+		get_viewport().set_input_as_handled()
+
 func move_camera(delta: float) -> void:
 	var direction = read_direction()
 	if direction == Vector3.ZERO:
 		return
 
-	var focus = camera.global_position - focus_offset + direction * CAMERA_SPEED * delta
-	focus.x = clampf(focus.x, bounds.position.x, bounds.end.x)
-	focus.z = clampf(focus.z, bounds.position.y, bounds.end.y)
-
-	camera.global_position = focus + focus_offset
+	camera.pan(direction * CAMERA_SPEED * delta)
 
 func read_direction() -> Vector3:
-	var forward = flatten(-camera.global_basis.z)
 	var right = flatten(camera.global_basis.x)
+	var forward = Vector3.UP.cross(right)
 	var direction = Vector3.ZERO
 
 	if Input.is_key_pressed(KEY_W):
@@ -56,7 +60,4 @@ func read_direction() -> Vector3:
 
 func flatten(vector: Vector3) -> Vector3:
 	return Vector3(vector.x, 0.0, vector.z).normalized()
-
-func find_focus() -> Vector3:
-	return Plane(Vector3.UP, 0.0).intersects_ray(camera.global_position, -camera.global_basis.z)
 #endregion

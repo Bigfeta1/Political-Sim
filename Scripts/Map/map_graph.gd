@@ -1,5 +1,9 @@
 extends Node
 
+const MapCell = preload("res://Scripts/Map/map_cell.gd")
+
+const LAND_SHARE = 0.29
+
 const DIRECTIONS = [
 	Vector2i(1, 0),
 	Vector2i(1, -1),
@@ -21,8 +25,8 @@ func generate(dimensions: Vector2i) -> void:
 func get_save_data() -> Dictionary:
 	var saved_cells := []
 
-	for cell in cells:
-		saved_cells.append([cell.x, cell.y])
+	for cell in cells.values():
+		saved_cells.append([cell.coordinate.x, cell.coordinate.y, cell.terrain])
 
 	return {"cells": saved_cells}
 
@@ -30,7 +34,8 @@ func load_save_data(data: Dictionary) -> void:
 	cells.clear()
 
 	for saved_cell in data["cells"]:
-		cells[Vector2i(int(saved_cell[0]), int(saved_cell[1]))] = []
+		var coordinate = Vector2i(int(saved_cell[0]), int(saved_cell[1]))
+		cells[coordinate] = MapCell.new(coordinate, int(saved_cell[2]))
 
 	connect_neighbours()
 #endregion
@@ -39,7 +44,11 @@ func load_save_data(data: Dictionary) -> void:
 func create_cells(dimensions: Vector2i) -> void:
 	for row in dimensions.y:
 		for column in dimensions.x:
-			cells[to_axial(column, row)] = []
+			var coordinate = to_axial(column, row)
+			cells[coordinate] = MapCell.new(coordinate, pick_terrain())
+
+func pick_terrain() -> int:
+	return MapCell.Terrain.LAND if randf() < LAND_SHARE else MapCell.Terrain.WATER
 
 func to_axial(column: int, row: int) -> Vector2i:
 	return Vector2i(column - floori(row / 2.0), row)
@@ -51,5 +60,5 @@ func connect_neighbours() -> void:
 		for direction in DIRECTIONS:
 			var neighbour = cell + direction
 			if cells.has(neighbour):
-				cells[cell].append(neighbour)
+				cells[cell].neighbours.append(neighbour)
 #endregion
