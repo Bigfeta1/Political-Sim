@@ -22,11 +22,12 @@ Scenes are grouped by game state, and scripts are split into a logic tree and a 
 | `Scripts/Autoload/` | The three autoloads: `game_state.gd` (`GameState`), `save_writer.gd` (`SaveWriter`) and `scene_loader.gd` (`SceneLoader`). |
 | `Scripts/Logic/` | `state_router.gd`, `round_config.gd`, and one folder per area: `MainMenu/` (with `RoundConfig/` and `LoadPanel/` for the panels' logic), `RoundConfigurator/`, `PlayingRound/`. |
 | `Scripts/UI/` | UI scripts, one folder per area: `MainMenu/` (with `Panels/RoundConfig/` and `Panels/LoadPanel/`), `ConfigureRound/`, `PlayingRound/` (with `TopBar/`: `top_bar.gd` and `parameter_label.gd`). |
-| `Scripts/Country/` | `Countries/country.gd`, `Parameters/` (one script per parameter node: `population.gd`, `economy.gd`, `public_image.gd`) and `CountryManager/` (manager, logic, factory, list). `country_manager.gd` has `get_player_country()`, which returns the country in `CountryList` whose `data.is_player` is true. |
+| `Scripts/Country/` | `Countries/country.gd`, `Parameters/` (one script per parameter node: `population.gd`, `economy.gd`, `public_image.gd`, and `Population/` for the population's children) and `CountryManager/` (manager, logic, factory, list). `country_manager.gd` has `get_player_country()`, which returns the country in `CountryList` whose `data.is_player` is true. |
 | `Scripts/MainScene/` | `main_scene.gd` and `logic.gd`, the registry (see below). |
 | `Scripts/MainMenu/` | `main_menu_router.gd`, the menu's own router, and `Panels/begin_button.gd`. |
 | `Scripts/PlayerManager/` | `player_data.gd`, the `Data` node on each country, the central place to read and write its values (see Country data). |
-| `Scripts/Data/` | Static helpers for reading files: `country_files.gd` (country JSON) and `save_file.gd` (save files). Not nodes; callers `preload` them. |
+| `Scripts/Data/` | Static helpers for reading files: `country_files.gd` (country JSON), `mortality_files.gd` (WHO mortality JSON), `risk_factor_files.gd` (risk factor JSON) and `save_file.gd` (save files). Not nodes; callers `preload` them. |
+| `Data/Mortality/`, `Data/RiskFactors/` | WHO deaths and population per age band for each country, and relative risks per risk factor. See `docs/life_expectancy.md`. |
 
 Three scripts sit outside this pattern: `Scenes/MainMenu/Buttons/new_game_button.gd` lives beside the scenes, and `Scripts/MainMenu/Panels/begin_button.gd` and `Scripts/MainMenu/main_menu_router.gd` live in a `MainMenu` folder at the scripts root.
 
@@ -166,15 +167,36 @@ Each country is a `country.tscn` instance. A country's values that change during
 Country                  country.gd: holds the nodes below, saves and loads the country
 ├─ Data                  player_data.gd: id, is_player, name, initiative, plus pass-through fields
 └─ Parameters
-   ├─ Population         population.gd: population, life_expectancy
+   ├─ Population         population.gd: wires its children, merges their save data
+   │  ├─ Count           population_count.gd: population_count
+   │  ├─ AgeBands        age_band.gd per band (7 WHO bands)
+   │  ├─ RiskFactors     risk_factor.gd per factor (Smoking)
+   │  ├─ Mortality       mortality.gd: death rate per band
+   │  ├─ LifeExpectancy  life_expectancy.gd: life_expectancy, calculated
+   │  └─ Workers         workers.gd: workers
    ├─ Economy            economy.gd: money
    ├─ PublicImage        public_image.gd: public_image
    └─ Army, Production, Factions   (no scripts yet)
 ```
 
-**Parameter nodes own the values.** Each parameter script holds its values, emits a `<name>_changed(new_value)` signal from each value's setter, and has its own `get_save_data()` and `load_save_data(data)` for its keys. Logic for a parameter (for example, how population grows) belongs in its script.
+`AgeBands`, `RiskFactors`, `Mortality` and `LifeExpectancy` are the life expectancy engine. `docs/life_expectancy.md` covers them.
 
-**`Data` only reads and writes.** It stores `id`, `is_player`, `country_name` and `country_initiative` itself. Its other fields (`country_money`, `country_public_image`, `country_life_expectancy`, `country_population`) have a getter and setter that go straight to the parameter node, so `data.country_money = 5` sets `economy.money`. `Data` has no signals and no save or load functions. `country.gd` passes it the `Parameters` node in `_ready()` through `data.initialize(parameters)`, and `initialize` takes each parameter node from it by name (`parameters.get_node("Economy")`).
+**Parameter nodes own the values.** Each value is a plain variable with a `set_<name>(value)` function that stores it and emits `<name>_changed(new_value)` (for example `set_money()` and `money_changed`). Anything that changes the value calls that function, including the node's own `load_save_data`. Writing the variable directly stores it without emitting. Each node has its own `get_save_data()` and `load_save_data(data)` for its keys. Logic for a parameter (for example, how population grows) belongs in its script.
+
+**`Data` only reads and writes.** It stores `id`, `is_player`, `country_name` and `country_initiative` itself. Its other fields have a getter and setter that go straight to the parameter node, so `data.country_money = 5` calls `economy.set_money(5)`:
+
+| `Data` field | Goes to |
+| --- | --- |
+| `country_population_count` | `Count.population_count` / `set_population_count()` |
+| `country_life_expectancy` | `LifeExpectancy.life_expectancy` (read only) |
+| `country_target_life_expectancy` | `LifeExpectancy.target_life_expectancy` |
+| `country_mortality` | `Mortality.mortality` / `set_mortality()` |
+| `country_risk_prevalence` | `Mortality.risk_prevalence` / `set_risk_prevalence()` |
+| `country_workers` | `Workers.workers` / `set_workers()` |
+| `country_money` | `Economy.money` / `set_money()` |
+| `country_public_image` | `PublicImage.public_image` / `set_public_image()` |
+
+`Data` has no signals and no save or load functions. `country.gd` calls `data.initialize(population, economy, public_image)` in `_ready()`, and `initialize` takes the population's children from `population.gd`'s references (`population.count`, `population.mortality`, `population.life_expectancy`, `population.workers`).
 
 **`country.gd` saves and loads the country.** It has `@onready` references to `data`, `parameters`, `population`, `economy` and `public_image`. Its `get_save_data()` writes `id` and `is_player` from `Data`, then loops over the children of `Parameters` and merges in the save data of each one that has `get_save_data()`. `load_save_data(save_data)` loops the same way and passes the save to each child that has `load_save_data()`. Nodes without a script (Army, Production, Factions) are skipped, and a new parameter node with save functions is saved without editing `country.gd`.
 
@@ -187,8 +209,12 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 | `initiative` | `country_initiative` | `Data` | 1 to 5 | Game design |
 | `money` | `country_money` | `Economy.money` | Billions of USD | Total household wealth, 2022 (UBS / Credit Suisse Global Wealth Databook 2022) |
 | `public_image` | `country_public_image` | `PublicImage.public_image` | 0 to 10 | 5 for every country, a placeholder |
-| `life_expectancy` | `country_life_expectancy` | `Population.life_expectancy` | Years | Life expectancy at birth, mostly 2021–2023 (GBD, CDC). Israel's is from 2014. |
-| `population` | `country_population` | `Population.population` | People | World Bank total population, 2024 (indicator `SP.POP.TOTL`) |
+| `life_expectancy` | `country_target_life_expectancy` | `LifeExpectancy.target_life_expectancy` | Years | WHO life expectancy at birth, both sexes, 2023 (`WHOSIS_000001`). The engine calibrates to it; see `docs/life_expectancy.md`. |
+| `risk_prevalence` | `country_risk_prevalence` | `Mortality.risk_prevalence` | Shares per exposure level | Empty `{}` for every country; no source found yet |
+| `population` | `country_population_count` | `Count.population_count` | People | World Bank total population, 2024 (indicator `SP.POP.TOTL`) |
+| `workers` | `country_workers` | `Workers.workers` | People per role | |
+
+The factory also reads `Data/Mortality/mortality_<id>.json` into `country_mortality`, after the target and before the risk prevalence, because setting it calibrates against the target.
 
 Godot's JSON parser reads every number as a float, so these values are floats. The labels format them for display.
 
@@ -199,14 +225,14 @@ The playing round does not own its systems. It is a thin scene that receives the
 - **Logic (`playing_round_logic.tscn`).** A `PlayingRound` node with an `EventCoordinators` child that holds `GameInitializer`. The router calls `initialize(country_manager)`, which passes the manager down to the initializer. `GameInitializer` only stores it so far.
 - **Systems.** The country manager and state manager were created and registered during configure. The router reads `state_manager` from the registry and takes `turn_manager` and `phase_manager` from it.
 - **UI (`playing_round_ui.tscn`).** The router gets the player's country from `country_manager.get_player_country()` and calls `initialize(state_manager, phase_manager, turn_manager, player_country)`. `PhaseLabel` and `TurnLabel` each draw their current value on initialize and update on `phase_changed` and `turn_changed`. `TurnLabel` reads the current country from `TurnManager.get_current_turn()` and shows "STANDBY" when there is none. The end-turn button (`Buttons/EndTurnButton`) holds the state manager and calls `state_manager.turn_manager.next_turn()`.
-- **Top bar.** `TopBar` (`top_bar.gd`) receives the player's country and passes it to the four labels in `TopBar/HBoxContainer`. All four use one script, `Scripts/UI/PlayingRound/TopBar/parameter_label.gd`, set up per label in the scene through four exported settings: `symbol`, `parameter` (the node name under `Parameters`), `value` (the value's name on that node) and `format`. On initialize a label draws its starting value from `Data`'s `country_<value>`, connects to `<value>_changed` on the parameter node, and redraws on change, the same way `PhaseLabel` works. So a new value only displays correctly if its `Data` field and signal follow those names.
+- **Top bar.** `TopBar` (`top_bar.gd`) receives the player's country and passes it to the four labels in `TopBar/HBoxContainer`. All four use one script, `Scripts/UI/PlayingRound/TopBar/parameter_label.gd`, set up per label in the scene through four exported settings: `symbol`, `parameter` (the node path under `Parameters`, e.g. `Population/Count`), `value` (the value's name on that node) and `format`. On initialize a label draws its starting value from `Data`'s `country_<value>`, connects to `<value>_changed` on the parameter node, and redraws on change, the same way `PhaseLabel` works. So a new value only displays correctly if its `Data` field and signal follow those names.
 
 | Label | `symbol` | `parameter` | `value` | `format` | Shows |
 | --- | --- | --- | --- | --- | --- |
 | `MoneyLabel` | `$` | `Economy` | `money` | `BILLIONS_OF_USD` | Trillions with one decimal (`$ 139.9T`), or whole billions below 1000 (`$ 850B`) |
 | `PublicImageLabel` | `★` | `PublicImage` | `public_image` | `PLAIN` | The raw value (`★ 5.0`) |
-| `LifeExpectancyLabel` | `♥` | `Population` | `life_expectancy` | `WHOLE` | Rounded to whole years (`♥ 78`). Only the display is rounded. |
-| `PopulationLabel` | `☻` | `Population` | `population` | `PEOPLE` | Billions or millions with one decimal (`☻ 1.4B`, `☻ 340.0M`), or the raw number below a million |
+| `LifeExpectancyLabel` | `♥` | `Population/LifeExpectancy` | `life_expectancy` | `WHOLE` | Rounded to whole years (`♥ 78`). Only the display is rounded. |
+| `PopulationLabel` | `☻` | `Population/Count` | `population_count` | `PEOPLE` | Billions or millions with one decimal (`☻ 1.4B`, `☻ 340.0M`), or the raw number below a million |
 
 A new number format is a new `Format` value and a branch in `format_value`. The symbols are a placeholder for icon images.
 - **Input.** `InputHandler` (`playing_round_input.gd`, under `Logic`) handles two keys: F5 calls `SaveWriter.save()`, and Alt requests `MAIN_MENU`.
@@ -241,13 +267,13 @@ The turn order is computed once, during `SetTurnOrder`. It does not change betwe
 
 | Key | Source |
 | --- | --- |
-| `version` | `SAVE_VERSION` (3). Written but not checked on load. |
+| `version` | `SAVE_VERSION` (5). Written but not checked on load. |
 | `round` | `StateManager.get_save_data()`: `current_round` |
 | `phase` | `PhaseManager.get_save_data()`: `current_phase` |
 | `turn` | `TurnManager.get_save_data()`: `turn_order`, `current_turn_index` |
-| `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `population` and `life_expectancy` from `Population`, `money` from `Economy`, `public_image` from `PublicImage` |
+| `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `population_count` from `Count` and `workers` from `Workers` (merged by `Population`), `money` from `Economy`, `public_image` from `PublicImage` |
 
-Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, life expectancy and population are saved because they are meant to change during play; the JSON only holds their base values. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
+Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, population count and workers are saved because they are meant to change during play; the JSON only holds their base values. Life expectancy is not saved: it is recalculated from the mortality data when the country is created. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
 
 **Load.** There is no separate load path. The load button puts the parsed save on the `round_config` node and requests `CONFIGURE_ROUND`, and the normal steps build the round to that config. `CreatePlayerCountry` reads the player id from the config unchanged, `CreatePlayers` creates the saved opponents, and `RestoreSavedState` applies round, phase and turn, then each country's saved values. The countries are first created from their JSON and then overwritten from the save. `load_save_data` sets fields directly. `PhaseManager` must not go through `advance_phase`, because `phase_changed` calls `start_turns` and would reset the turn index.
 
@@ -303,8 +329,8 @@ Today only one prefetch exists: `StateRouter` requests the playing round logic a
 **Add a country value**
 
 1. Add the key to every file in `Data/Country_Data/`.
-2. Put the value on the parameter node it belongs to, with a setter that emits `<name>_changed`, and add it to that node's `get_save_data()` and `load_save_data()`. If the node has no script yet, write one in `Scripts/Country/Parameters/` like `economy.gd`, attach it in `country.tscn`, and add an `@onready` for it in `country.gd` so the UI can reach its signals. `country.gd` picks up its save functions on its own.
-3. In `player_data.gd`, add a field whose getter and setter go to the node. If the node is new, also add a `<name>_node` variable and set it in `initialize` with `parameters.get_node("<NodeName>")`.
+2. Put the value on the parameter node it belongs to as a plain variable with a `set_<name>(value)` function that stores it and emits `<name>_changed`, and add it to that node's `get_save_data()` and `load_save_data()` (which calls `set_<name>()`). If the node has no script yet, write one in `Scripts/Country/Parameters/` like `economy.gd`, attach it in `country.tscn`, and add an `@onready` for it in `country.gd` (or in `population.gd` for a child of `Population`). `country.gd` picks up its save functions on its own.
+3. In `player_data.gd`, add a field whose getter reads the node's variable and whose setter calls its `set_<name>()`. If the node is new, also add a `<name>_node` variable and set it in `initialize` from the reference passed in.
 4. Read the key in `country_factory.gd`'s `configure_country`.
 5. Bump `SAVE_VERSION`, since the save format changed.
 6. To show it, add a label under `TopBar/HBoxContainer` with `parameter_label.gd`, fill in its four settings in the inspector, and initialize it in `top_bar.gd`.
@@ -324,9 +350,10 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Nothing listens to `round_changed`.** There is no round label yet.
 - **Save and load are untested.** F5 save, the load entry, the X button and the restore step have been written but not run in the editor.
 - **One save slot.** F5 overwrites `user://saves/save.json`. Multiple slots would need a name per save and a list in the load panel.
-- **Version is not checked.** `version` is written and ignored on load. A save from before version 3 has no `money`, `public_image`, `life_expectancy` or `population` and errors in the parameter nodes' `load_save_data`.
+- **Version is not checked.** `version` is written and ignored on load. A save written before the 2026-10-23 rename of `population` to `population_count` errors in `Count.load_save_data`, and `SAVE_VERSION` was not bumped for that rename, so such a save still says version 5.
 - **Saved countries must exist.** A save naming a country with no JSON file would fail in the factory. This is accepted for now.
-- **Country values never change.** Money, public image, life expectancy and population are loaded, shown and saved, but nothing in play changes them yet.
+- **Country values never change.** Money, public image, population count and workers are loaded and saved, and life expectancy is calculated once, but nothing in play changes any of them yet.
+- **Two population figures.** `Count.population_count` comes from the World Bank figure in the country JSON. The age bands' populations come from the WHO mortality file. Nothing connects them.
 - **Money measure is open.** `money` is total household wealth (2022). Gross national assets (about $269 trillion for the US) and net national wealth were discussed as alternatives; a comparable source for all six countries has not been found.
 - **Top bar is untested in a run.** The labels, their formatting and whether the font draws `★`, `♥` and `☻` have not been confirmed by running the game.
 - **Stubs.** `GameInitializer` stores the country manager and does nothing; the phases have names and a cycle but no behaviour.

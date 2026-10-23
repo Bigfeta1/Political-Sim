@@ -4,41 +4,46 @@ Each country's life expectancy is calculated from real WHO death rates per age b
 Risk factors scale those death rates cause by cause. 
 Smoking is built in but has no effect yet, because no country has smoking prevalence data and nothing in play changes it.
 
-- **Calculated, not copied:** `life_expectancy.gd` runs an abridged life table over 7 age bands and 181 WHO causes of death.
+- **Calculated, not copied:** `Mortality` turns WHO deaths into a death rate per age band, and `LifeExpectancy` runs an abridged life table over those rates (7 age bands, 181 WHO causes of death).
 - **Calibrated:** the open-ended 70+ band is tuned once at start so the result equals the target.
 - **Static for now:** the value is calculated once, when the country is created. Nothing recalculates it during play yet.
-- **Not run in Godot yet:** the maths was checked in Python; the editor and the game have not opened these files.
+- **Checked in Godot headless, not in the game:** every country lands on its target when built headless (see Verification). The game flow, the top bar and save/load have not been run.
 
 ## Node structure
 
-The `Population` node in `country.tscn` has three children. `LifeExpectancy` holds the age bands and the risk factors it computes from.
+Each job has its own child of `Population` in `country.tscn`. `population.gd` wires them in `_ready()`: it hands `AgeBands` and `RiskFactors` to `Mortality`, and `AgeBands` and `Mortality` to `LifeExpectancy`.
 
 ```
-Population             population.gd: merges its children's save data
-├─ Count               population_count.gd: population, population_changed
+Population             population.gd: wires its children, merges their save data
+├─ Count               population_count.gd: population_count, population_count_changed
+├─ AgeBands
+│  ├─ Age0To4          age_band.gd: key "0-4" gives start_age 0, width 5
+│  ├─ Age5To14 … Age60To69
+│  └─ Age70Plus        key "70+" gives width 0 = the open-ended last band
+├─ RiskFactors
+│  └─ Smoking          risk_factor.gd: key "smoking"
+├─ Mortality           mortality.gd: fills the bands, death rate per band, mortality_changed
 ├─ LifeExpectancy      life_expectancy.gd: life table, 70+ calibration, life_expectancy_changed
-│  ├─ AgeBands
-│  │  ├─ Age0To4       age_band.gd: key "0-4" gives start_age 0, width 5
-│  │  ├─ Age5To14 … Age60To69
-│  │  └─ Age70Plus     key "70+" gives width 0 = the open-ended last band
-│  └─ RiskFactors
-│     └─ Smoking       risk_factor.gd: key "smoking"
 └─ Workers             workers.gd: head count per role
 ```
 
+A `[connection]` in `country.tscn` routes `Mortality.mortality_changed` to `LifeExpectancy._on_mortality_changed`, which runs `calibrate()` and then `calculate()`. Each of those calls `life_table()` once.
+
 | Script | Job |
 | --- | --- |
-| `Scripts/Country/Parameters/Population/life_expectancy.gd` | Holds `target_life_expectancy`, `mortality` and `risk_prevalence`. Setting `mortality` fills the bands, calibrates and calculates. Emits `life_expectancy_changed`. |
-| `Scripts/Country/Parameters/Population/age_band.gd` | Holds a band's population and deaths per WHO cause. `death_rate(risk_factors)` multiplies each cause's deaths by every factor's multiplier. |
+| `Scripts/Country/Parameters/population.gd` | Calls `mortality.initialize(age_bands, risk_factors)` and `life_expectancy.initialize(age_bands, mortality)`. |
+| `Scripts/Country/Parameters/Population/mortality.gd` | Holds `mortality` and `risk_prevalence`. `set_mortality()` fills each band's population and deaths, then emits `mortality_changed`. `set_risk_prevalence()` hands each factor its start and current shares. `death_rate(band)` multiplies each cause's deaths by every factor's multiplier and divides by the band's population. |
+| `Scripts/Country/Parameters/Population/life_expectancy.gd` | Holds `target_life_expectancy` and `life_expectancy`. Asks `Mortality` for each band's death rate. `set_life_expectancy()` emits `life_expectancy_changed`. |
+| `Scripts/Country/Parameters/Population/age_band.gd` | Data only: `key`, plus `start_age` and `width` read from it in `_ready()`, plus the band's population and deaths per WHO cause. |
 | `Scripts/Country/Parameters/Population/risk_factor.gd` | Reads its RR file in `_ready()`. `multiplier(cause, band)` returns 1 when it has no prevalence or the band starts below `min_age`. |
 | `Scripts/Data/mortality_files.gd` | `find_by_id(id)` reads `Data/Mortality/mortality_<id>.json`. |
 | `Scripts/Data/risk_factor_files.gd` | `read(key)` reads `Data/RiskFactors/<key>.json`. |
 
-**Setup order.** `country_factory.gd` sets the target from the country JSON first, then the mortality data, which calibrates the 70+ band against it, then the risk prevalence. `Data` (`player_data.gd`) passes `country_target_life_expectancy`, `country_mortality` and `country_risk_prevalence` through to `LifeExpectancy`. `country_life_expectancy` is read-only.
+**Setup order.** `country_factory.gd` sets the target from the country JSON first, then the mortality data, which calibrates the 70+ band against it, then the risk prevalence. `Data` (`player_data.gd`) passes `country_target_life_expectancy` through to `LifeExpectancy`, and `country_mortality` and `country_risk_prevalence` through to `Mortality`. `country_life_expectancy` is read-only.
 
 **Age bands are fixed by the data.** Each band reads its population and deaths from the mortality file by its `key` (`value["bands"][band.key]` in `set_mortality`). The WHO files hold only the 7 bands above (`0-4`, `5-14`, `15-29`, `30-49`, `50-59`, `60-69`, `70+`), so these are the only bands the engine can run. A band whose key is not in the file errors on load. Other brackets need mortality data in those brackets.
 
-**Saving.** Life expectancy is calculated, so `LifeExpectancy` saves nothing. `SAVE_VERSION` is 5.
+**Saving.** Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing. `SAVE_VERSION` is 5.
 
 ## `life_expectancy.gd` by symbol
 
@@ -171,9 +176,20 @@ The mortality and smoking files were built by Python scripts (`build_mortality.p
 
 ## Verification
 
-A Python mirror of the engine reproduces every target exactly and moves life expectancy in the expected direction. Nothing has been run in Godot.
+A Python mirror of the engine reproduces every target exactly and moves life expectancy in the expected direction. On 2026-10-23 the engine was also run in Godot 4.5.1 headless after the `Mortality` split: a temporary script built each `country.tscn` the way `country_factory.gd` does and printed `country_life_expectancy`. The game flow was not run.
 
-**Calibration per country:**
+**Godot headless, per country:**
+
+| Country | Target | Engine result |
+| --- | --- | --- |
+| America | 78.5 | 78.5 |
+| China | 77.9 | 77.9 |
+| Germany | 81.0 | 81.0 |
+| Israel | 82.6 | 82.6 |
+| Russia | 72.4 | 72.4 |
+| UK | 80.7 | 80.7 |
+
+**Calibration per country (Python):**
 
 | Country | Target e0 (years) | Years lived before 70 | Share reaching 70 | Years after 70, flat rate | Years after 70, calibrated |
 | --- | --- | --- | --- | --- | --- |
@@ -186,12 +202,14 @@ A Python mirror of the engine reproduces every target exactly and moves life exp
 
 **Smoking response, USA, made-up test prevalences** (start: 50% never, 30% former, 20% current; not game data):
 
-| Scenario | Life expectancy (years) |
-| --- | --- |
-| Start | 78.50 |
-| Half the smokers quit | 79.94 |
-| Smoking doubles | 75.96 |
-| Nobody ever smoked | 83.73 |
+| Scenario | Python | Godot |
+| --- | --- | --- |
+| Start | 78.50 | 78.50 |
+| Half the smokers quit (current 0.2 → 0.1, former 0.3 → 0.4) | 79.94 | 79.935 |
+| Smoking doubles | 75.96 | not matched |
+| Nobody ever smoked | 83.73 | 83.728 |
+
+The shares behind the Python "Smoking doubles" row were not recorded. In Godot, current 0.4 taken from former smokers (never 0.5, former 0.1) gives 76.17, and current 0.4 taken from never smokers (never 0.3, former 0.3) gives 75.76. Neither is 75.96, so it is not known whether the gap is in the scenario or the engine.
 
 These responses are likely on the high side: the 70+ band uses all-ages RRs, and quitting pays off instantly.
 
@@ -213,7 +231,9 @@ Every choice follows the same rule: use real published data and never invent a n
 
 ## Open items
 
-- [ ] Run the game in Godot: check the scene loads and each country's life expectancy equals its target
+- [x] Check in Godot that the scene loads and each country's life expectancy equals its target (headless, 2026-10-23)
+- [ ] Run the game flow: the top bar shows life expectancy, and save/load still works
+- [ ] Resolve the "Smoking doubles" mismatch: recover the Python scenario's shares
 - [ ] Smoking prevalence per country: never / former / current shares (WHO has current only)
 - [ ] Relative risks for blood pressure, diabetes, physical inactivity and alcohol, read from the original papers
 - [ ] Prevalence per level for those four factors, using the same cut-offs as their RRs
@@ -221,4 +241,4 @@ Every choice follows the same rule: use real published data and never invent a n
 - [ ] Once prevalence can change: save it, and recalculate life expectancy on change
 - [ ] Consider age-specific smoking RRs (Table S8) so the effect fades with age
 - [ ] Copy `build_mortality.py` and `build_smoking.py` into the project so the data can be rebuilt
-- [ ] Update `docs/onboarding.md` with the Population and life expectancy changes
+- [x] Update `docs/onboarding.md` with the Population and life expectancy changes (2026-10-23)
