@@ -50,10 +50,12 @@ func pan(offset: Vector3) -> void:
 	place()
 
 func place() -> void:
-	focus.x = clampf(focus.x, bounds.position.x, bounds.end.x)
-	focus.z = clampf(focus.z, bounds.position.y, bounds.end.y)
-
 	var centre = bounds.get_center()
+	if zoom < 1.0:
+		var reach = bounds.size / 2.0 / (1.0 - zoom)
+		focus.x = clampf(focus.x, centre.x - reach.x, centre.x + reach.x)
+		focus.z = clampf(focus.z, centre.y - reach.y, centre.y + reach.y)
+
 	var target = focus.lerp(Vector3(centre.x, 0.0, centre.y), zoom)
 
 	rotation.x = lerpf(close_pitch, TOP_DOWN_PITCH, zoom)

@@ -1,5 +1,7 @@
 shader_type spatial;
 
+#include "res://Assets/Shaders/coast.gdshaderinc"
+
 uniform vec3 deep_colour : source_color = vec3(0.02, 0.12, 0.32);
 uniform vec3 shallow_colour : source_color = vec3(0.06, 0.36, 0.58);
 uniform vec3 rim_colour : source_color = vec3(0.55, 0.78, 0.92);
@@ -14,12 +16,14 @@ uniform float flow_speed = 0.12;
 uniform float flow_cycle = 4.0;
 
 uniform sampler2D map_data : filter_linear, repeat_disable;
-uniform vec2 map_origin;
-uniform vec2 map_centre;
 uniform float max_coast_distance = 8.0;
 
 uniform vec3 coast_colour : source_color = vec3(0.12, 0.62, 0.66);
 uniform float shallow_hexes = 3.0;
+
+uniform vec3 sandy_shallow_colour : source_color = vec3(0.50, 0.80, 0.72);
+uniform float sandy_shallow_width = 0.5;
+uniform float sandy_shallow_strength = 0.8;
 
 uniform vec3 foam_colour : source_color = vec3(0.92, 0.97, 1.0);
 uniform float foam_width = 0.22;
@@ -33,40 +37,7 @@ uniform vec3 outline_colour : source_color = vec3(0.02, 0.08, 0.18);
 uniform float outline_width = 0.03;
 uniform float outline_opacity = 0.5;
 
-const float SQRT_3 = 1.7320508;
-const vec2 HEX_DIRECTIONS[6] = vec2[](
-	vec2(1.0, 0.0),
-	vec2(1.0, -1.0),
-	vec2(0.0, -1.0),
-	vec2(-1.0, 0.0),
-	vec2(-1.0, 1.0),
-	vec2(0.0, 1.0)
-);
-
 varying vec3 world_position;
-
-vec2 to_axial(vec2 map_position) {
-	float r = map_position.y / 1.5;
-	float q = map_position.x / SQRT_3 - r * 0.5;
-	return vec2(q, r);
-}
-
-vec2 round_axial(vec2 axial) {
-	vec3 cube = vec3(axial.x, axial.y, -axial.x - axial.y);
-	vec3 rounded = round(cube);
-	vec3 difference = abs(rounded - cube);
-
-	if (difference.x > difference.y && difference.x > difference.z) {
-		rounded.x = -rounded.y - rounded.z;
-	} else if (difference.y > difference.z) {
-		rounded.y = -rounded.x - rounded.z;
-	}
-	return rounded.xy;
-}
-
-vec2 to_map_position(vec2 axial) {
-	return vec2(SQRT_3 * (axial.x + axial.y * 0.5), 1.5 * axial.y);
-}
 
 vec4 sample_map_data(vec2 axial) {
 	vec2 uv = (axial - map_origin + 0.5) / vec2(textureSize(map_data, 0));
@@ -89,9 +60,9 @@ float shore_distance(vec2 map_position) {
 	float nearest = 1000.0;
 
 	for (int index = 0; index < 6; index++) {
-		if (land_flag(cell + HEX_DIRECTIONS[index]) > 0.5) {
-			vec2 direction = normalize(to_map_position(HEX_DIRECTIONS[index]));
-			nearest = min(nearest, SQRT_3 * 0.5 - dot(local, direction));
+		vec2 neighbour = cell + HEX_DIRECTIONS[index];
+		if (land_flag(neighbour) > 0.5 && terrain_at(neighbour) != TERRAIN_DESERT) {
+			nearest = min(nearest, edge_distance(local, index));
 		}
 	}
 	return nearest;
@@ -166,6 +137,10 @@ void fragment() {
 	vec4 map_sample = sample_map_data(to_axial(map_position));
 	vec2 flow = map_sample.ba * 2.0 - 1.0;
 
+	float sand_shore = beach_shore(map_position);
+	float sand_blur = fwidth(sand_shore);
+	float sand = 1.0 - smoothstep(-sand_blur, sand_blur, sand_shore);
+
 	float height = flowed_height(point, time, flow);
 	float height_x = flowed_height(point + vec2(step_size, 0.0), time, flow);
 	float height_z = flowed_height(point + vec2(0.0, step_size), time, flow);
@@ -175,6 +150,7 @@ void fragment() {
 		1.0,
 		(height - height_z) / step_size * wave_strength
 	));
+	world_normal = normalize(mix(world_normal, vec3(0.0, 1.0, 0.0), sand));
 	NORMAL = normalize((VIEW_MATRIX * vec4(world_normal, 0.0)).xyz);
 
 	float fresnel = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), fresnel_power);
@@ -183,10 +159,12 @@ void fragment() {
 
 	vec3 open_water = mix(deep_colour, shallow_colour, smoothstep(0.3, 0.75, height));
 	vec3 water = mix(coast_colour, open_water, openness);
+	float sandy_shallows = 1.0 - smoothstep(0.0, sandy_shallow_width, sand_shore);
+	water = mix(water, sandy_shallow_colour, sandy_shallows * sandy_shallow_strength);
 
 	ALBEDO = mix(water, rim_colour, fresnel * fresnel_strength);
 
-	float shore = shore_distance(map_position) + (height - 0.5) * foam_breakup * foam_width;
+	float shore = min(shore_distance(map_position), sand_shore) + (height - 0.5) * foam_breakup * foam_width;
 	float foam_line = 1.0 - smoothstep(0.0, foam_line_width, shore);
 	float stripe = smoothstep(0.6, 0.9, sin(shore * foam_stripe_frequency + TIME * foam_stripe_speed) * 0.5 + 0.5);
 	float stripe_fade = 1.0 - smoothstep(0.0, foam_width, shore);
@@ -197,9 +175,10 @@ void fragment() {
 		float edge = hex_edge_distance(map_position);
 		float blur = fwidth(edge);
 		float line = 1.0 - smoothstep(outline_width - blur, outline_width + blur, edge);
-		ALBEDO = mix(ALBEDO, outline_colour, line * outline_opacity);
+		ALBEDO = mix(ALBEDO, outline_colour, line * outline_opacity * (1.0 - sand));
 	}
 
-	ROUGHNESS = mix(roughness, 0.8, foam);
-	SPECULAR = 0.7;
+	ALBEDO = mix(ALBEDO, beach_albedo(-sand_shore), sand);
+	ROUGHNESS = mix(mix(roughness, 0.8, foam), beach_roughness, sand);
+	SPECULAR = mix(0.7, 0.3, sand);
 }

@@ -33,7 +33,10 @@ const ODD_ROW_NEIGHBOURS = [
 	Vector2i(1, 1),
 ]
 
+var desert_regions := {}
+
 func generate(dimensions: Vector2i) -> Dictionary:
+	desert_regions.clear()
 	var land_map = MapFiles.find_by_id(MAP_ID)
 	var sizes = measure_landmasses(land_map["rows"])
 	var counts := {}
@@ -252,7 +255,9 @@ func neighbours(offset: Vector2i, dimensions: Vector2i) -> Array:
 
 #region Biomes
 func place_biomes(terrain: Dictionary, land_map: Dictionary, dimensions: Vector2i) -> void:
-	var grid = BiomeGrid.build(MapFiles.find_biomes_by_id(MAP_ID), int(land_map["width"]), int(land_map["height"]))
+	var biome_map = MapFiles.find_biomes_by_id(MAP_ID)
+	var grid = BiomeGrid.build(biome_map, int(land_map["width"]), int(land_map["height"]))
+	var desert_rows = biome_map.get("desert_rows", [])
 
 	for offset in terrain:
 		if terrain[offset] != MapCell.Terrain.LAND:
@@ -264,6 +269,11 @@ func place_biomes(terrain: Dictionary, land_map: Dictionary, dimensions: Vector2
 		if biome != null and biomes[biome] >= BIOME_THRESHOLD * squares.size():
 			terrain[offset] = BIOME_TERRAINS[biome]
 
+		if terrain[offset] == MapCell.Terrain.DESERT:
+			var region = dominant(count_desert_regions(desert_rows, squares))
+			if region != null:
+				desert_regions[offset] = region
+
 func count_biomes(grid: Array, squares: Array[Vector2i]) -> Dictionary:
 	var biomes := {}
 
@@ -273,4 +283,17 @@ func count_biomes(grid: Array, squares: Array[Vector2i]) -> Dictionary:
 			biomes[biome] = biomes.get(biome, 0) + 1
 
 	return biomes
+
+func count_desert_regions(desert_rows: Array, squares: Array[Vector2i]) -> Dictionary:
+	var regions := {}
+
+	for square in squares:
+		if square.y >= desert_rows.size():
+			continue
+
+		var region = int(desert_rows[square.y][square.x])
+		if region != 0:
+			regions[region] = regions.get(region, 0) + 1
+
+	return regions
 #endregion

@@ -9,3 +9,7 @@ const RoundConfig = preload("res://Scripts/Logic/round_config.gd")
 
 func generate(dimensions: Vector2i, map_type: int) -> Dictionary:
 	return generators[map_type].generate(dimensions)
+
+func find_desert_regions(map_type: int) -> Dictionary:
+	var generator = generators[map_type]
+	return generator.desert_regions if "desert_regions" in generator else {}
