@@ -1,10 +1,12 @@
-[gd_scene load_steps=6 format=3 uid="uid://ci3di0bw1kl5x"]
+[gd_scene load_steps=8 format=3 uid="uid://ci3di0bw1kl5x"]
 
 [ext_resource type="Script" uid="uid://c773v8pkgpywj" path="res://Scripts/Logic/PlayingRound/playing_round.gd" id="1_spxyj"]
 [ext_resource type="Script" uid="uid://cdkjca860lqqq" path="res://Scripts/Logic/PlayingRound/EventCoordinators/event_coordinators.gd" id="2_q1gt0"]
 [ext_resource type="Script" uid="uid://cd14wivuvtrql" path="res://Scripts/Logic/PlayingRound/EventCoordinators/round_state_router.gd" id="3_huphp"]
 [ext_resource type="Script" uid="uid://bennpq8khga5x" path="res://Scripts/Logic/PlayingRound/EventCoordinators/game_initializer.gd" id="3_vpgwi"]
 [ext_resource type="Script" uid="uid://1xqu4cnqi70l" path="res://Scripts/Logic/PlayingRound/playing_round_input.gd" id="4_input"]
+[ext_resource type="Script" path="res://Scripts/Logic/PlayingRound/tile_picker.gd" id="5_picker"]
+[ext_resource type="Script" path="res://Scripts/Logic/PlayingRound/tile_selection.gd" id="6_selection"]
 
 [node name="PlayingRound" type="Node"]
 script = ExtResource("1_spxyj")
@@ -22,3 +24,15 @@ script = ExtResource("3_huphp")
 
 [node name="InputHandler" type="Node" parent="Logic"]
 script = ExtResource("4_input")
+
+[node name="TilePicker" type="Node" parent="Logic/InputHandler"]
+script = ExtResource("5_picker")
+
+[node name="TileSelection" type="Node" parent="Logic"]
+script = ExtResource("6_selection")
+
+[node name="LongHoverTimer" type="Timer" parent="Logic/TileSelection"]
+wait_time = 2.0
+one_shot = true
+
+[connection signal="timeout" from="Logic/TileSelection/LongHoverTimer" to="Logic/TileSelection" method="_on_long_hover_timer_timeout"]

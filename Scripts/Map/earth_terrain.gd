@@ -34,9 +34,11 @@ const ODD_ROW_NEIGHBOURS = [
 ]
 
 var desert_regions := {}
+var city_cells := {}
 
 func generate(dimensions: Vector2i) -> Dictionary:
 	desert_regions.clear()
+	city_cells.clear()
 	var land_map = MapFiles.find_by_id(MAP_ID)
 	var sizes = measure_landmasses(land_map["rows"])
 	var counts := {}
@@ -53,6 +55,7 @@ func generate(dimensions: Vector2i) -> Dictionary:
 	rescue_islands(terrain, counts, cells_of, sizes)
 	bridge_landmasses(terrain, counts, cells_of, dimensions)
 	place_biomes(terrain, land_map, dimensions)
+	place_cities(terrain, land_map, dimensions)
 
 	return terrain
 
@@ -296,4 +299,23 @@ func count_desert_regions(desert_rows: Array, squares: Array[Vector2i]) -> Dicti
 			regions[region] = regions.get(region, 0) + 1
 
 	return regions
+#endregion
+
+#region Cities
+func place_cities(terrain: Dictionary, land_map: Dictionary, dimensions: Vector2i) -> void:
+	var city_squares := {}
+	for city in MapFiles.find_cities_by_id(MAP_ID).get("cities", []):
+		city_squares[to_square(city, land_map)] = true
+
+	for offset in terrain:
+		for square in find_squares(land_map, dimensions, offset.x, offset.y):
+			if city_squares.has(square):
+				city_cells[offset] = true
+
+func to_square(city: Dictionary, land_map: Dictionary) -> Vector2i:
+	var map_width = int(land_map["width"])
+	var map_height = int(land_map["height"])
+	var x = clampi(floori((city["longitude"] + 180.0) / 360.0 * map_width), 0, map_width - 1)
+	var y = clampi(floori((90.0 - city["latitude"]) / 180.0 * map_height), 0, map_height - 1)
+	return Vector2i(x, y)
 #endregion

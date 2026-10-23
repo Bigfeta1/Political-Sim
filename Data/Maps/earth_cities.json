@@ -1,0 +1,11 @@
+{
+  "id": "earth",
+  "cities": [
+    {"name": "New York City", "latitude": 40.7128, "longitude": -74.006},
+    {"name": "Shanghai", "latitude": 31.2304, "longitude": 121.4737},
+    {"name": "Berlin", "latitude": 52.52, "longitude": 13.405},
+    {"name": "Jerusalem", "latitude": 31.7683, "longitude": 35.2137},
+    {"name": "Moscow", "latitude": 55.7558, "longitude": 37.6173},
+    {"name": "London", "latitude": 51.5074, "longitude": -0.1278}
+  ]
+}

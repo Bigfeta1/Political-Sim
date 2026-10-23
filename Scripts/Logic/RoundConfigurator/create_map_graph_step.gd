@@ -1,6 +1,7 @@
 extends Node
 
 const MAP_GRAPH = "res://Scenes/ConfigureRound/map_graph.tscn"
+const TILE_DIRECTORY = "res://Scenes/ConfigureRound/tile_directory.tscn"
 
 func run(configurator):
 	var map_graph = SceneLoader.instantiate(MAP_GRAPH)
@@ -14,3 +15,8 @@ func run(configurator):
 		map_graph.generate(config.get_map_dimensions(), config.map_type)
 	else:
 		map_graph.load_save_data(save_data["map"])
+
+	var tile_directory = SceneLoader.instantiate(TILE_DIRECTORY)
+	configurator.logic.add_child(tile_directory)
+	configurator.logic.register("tile_directory", tile_directory)
+	tile_directory.initialize(map_graph)

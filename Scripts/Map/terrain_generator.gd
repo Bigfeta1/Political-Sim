@@ -13,3 +13,7 @@ func generate(dimensions: Vector2i, map_type: int) -> Dictionary:
 func find_desert_regions(map_type: int) -> Dictionary:
 	var generator = generators[map_type]
 	return generator.desert_regions if "desert_regions" in generator else {}
+
+func find_cities(map_type: int) -> Dictionary:
+	var generator = generators[map_type]
+	return generator.city_cells if "city_cells" in generator else {}

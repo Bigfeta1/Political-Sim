@@ -2,17 +2,24 @@ extends Node
 
 const CAMERA_SPEED = 10.0
 
-var camera
+@onready var tile_picker = $TilePicker
 
-func initialize(camera_reference):
+var camera
+var tile_selection
+
+func initialize(camera_reference, hex_tile_grid, tile_directory, tile_selection_reference):
 	camera = camera_reference
+	tile_selection = tile_selection_reference
+	tile_picker.initialize(camera, hex_tile_grid, tile_directory)
 
 func _process(delta: float) -> void:
 	move_camera(delta)
+	read_hover()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		read_zoom(event)
+		read_click(event)
 		return
 
 	if not (event is InputEventKey and event.pressed and not event.echo):
@@ -60,4 +67,16 @@ func read_direction() -> Vector3:
 
 func flatten(vector: Vector3) -> Vector3:
 	return Vector3(vector.x, 0.0, vector.z).normalized()
+#endregion
+
+#region Tiles
+func read_hover() -> void:
+	tile_selection.set_hovered_coordinate(tile_picker.find_coordinate(get_viewport().get_mouse_position()))
+
+func read_click(event: InputEventMouseButton) -> void:
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	tile_selection.select(tile_picker.find_coordinate(event.position))
+	get_viewport().set_input_as_handled()
 #endregion

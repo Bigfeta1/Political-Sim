@@ -136,7 +136,7 @@ func create_playing_round():
 	playing_round_ui_instance = SceneLoader.instantiate(PLAYING_ROUND_UI)
 	ui.add_child(playing_round_ui_instance)
 
-	playing_round.initialize(logic.get_system("country_manager"), state_manager, playing_round_ui_instance, three_d)
+	playing_round.initialize(logic.get_system("country_manager"), state_manager, playing_round_ui_instance, three_d, logic.get_system("tile_directory"))
 
 	var player_country = logic.get_system("country_manager").get_player_country()
 	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager, player_country)

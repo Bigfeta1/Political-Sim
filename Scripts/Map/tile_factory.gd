@@ -15,8 +15,9 @@ const TERRAIN_TILES = {
 }
 
 const TILE_SIZE = 1.0
+const TILE_HEIGHT = 0.1048
 
-func build(cells: Dictionary, hex_tile_grid: Node3D) -> void:
+func build(cells: Dictionary, hex_tile_grid: Node3D, tile_directory) -> void:
 	var centre = find_centre(cells)
 	configure_water(cells)
 	configure_coast(cells, centre)
@@ -26,6 +27,7 @@ func build(cells: Dictionary, hex_tile_grid: Node3D) -> void:
 		var tile = create_tile(cell, centre)
 		hex_tile_grid.add_child(tile)
 		tile.initialize(cell)
+		tile_directory.add_tile(cell.coordinate, tile)
 
 func configure_water(cells: Dictionary) -> void:
 	WATER_MATERIAL.set_shader_parameter("map_data", WaterDataTexture.build(cells))
@@ -50,7 +52,7 @@ func create_tile(cell, centre: Vector3) -> Node3D:
 	tile.position = to_position(cell.coordinate) - centre
 	return tile
 
-func find_centre(cells: Dictionary) -> Vector3:
+static func find_centre(cells: Dictionary) -> Vector3:
 	var minimum = Vector3.INF
 	var maximum = -Vector3.INF
 
@@ -61,7 +63,7 @@ func find_centre(cells: Dictionary) -> Vector3:
 
 	return (minimum + maximum) / 2.0
 
-func to_position(coordinate: Vector2i) -> Vector3:
+static func to_position(coordinate: Vector2i) -> Vector3:
 	var x = TILE_SIZE * sqrt(3.0) * (coordinate.x + coordinate.y / 2.0)
 	var z = TILE_SIZE * 1.5 * coordinate.y
 	return Vector3(x, 0.0, z)

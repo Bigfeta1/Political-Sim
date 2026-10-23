@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3 uid="uid://cig3bxkpu6tn0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ca0sk"]
+bg_color = Color(0.3696837, 0.7879177, 0.91330564, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="TileTooltip" type="PanelContainer"]
+custom_minimum_size = Vector2(150, 100)
+offset_right = 350.0
+offset_bottom = 200.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_ca0sk")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2

@@ -46,11 +46,13 @@ func load_save_data(data: Dictionary) -> void:
 func create_cells(dimensions: Vector2i, map_type: int) -> void:
 	var terrain = terrain_generator.generate(dimensions, map_type)
 	var desert_regions = terrain_generator.find_desert_regions(map_type)
+	var cities = terrain_generator.find_cities(map_type)
 
 	for offset in terrain:
 		var coordinate = to_axial(offset.x, offset.y)
 		cells[coordinate] = MapCell.new(coordinate, terrain[offset])
 		cells[coordinate].desert_region = desert_regions.get(offset, 0)
+		cells[coordinate].has_city = cities.has(offset)
 
 func to_axial(column: int, row: int) -> Vector2i:
 	return Vector2i(column - floori(row / 2.0), row)
