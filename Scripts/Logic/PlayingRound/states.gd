@@ -2,6 +2,7 @@ extends Node
 
 @onready var turn_manager = $TurnManager
 @onready var phase_manager = $PhaseManager
+@onready var menu_state_manager = $MenuManager
 
 signal round_changed(new_round: int)
 

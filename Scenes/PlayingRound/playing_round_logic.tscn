@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://ci3di0bw1kl5x"]
+[gd_scene load_steps=6 format=3 uid="uid://ci3di0bw1kl5x"]
 
 [ext_resource type="Script" uid="uid://c773v8pkgpywj" path="res://Scripts/Logic/PlayingRound/playing_round.gd" id="1_spxyj"]
 [ext_resource type="Script" uid="uid://cdkjca860lqqq" path="res://Scripts/Logic/PlayingRound/EventCoordinators/event_coordinators.gd" id="2_q1gt0"]
+[ext_resource type="Script" uid="uid://cd14wivuvtrql" path="res://Scripts/Logic/PlayingRound/EventCoordinators/round_state_router.gd" id="3_huphp"]
 [ext_resource type="Script" uid="uid://bennpq8khga5x" path="res://Scripts/Logic/PlayingRound/EventCoordinators/game_initializer.gd" id="3_vpgwi"]
-[ext_resource type="Script" path="res://Scripts/Logic/PlayingRound/playing_round_input.gd" id="4_input"]
+[ext_resource type="Script" uid="uid://1xqu4cnqi70l" path="res://Scripts/Logic/PlayingRound/playing_round_input.gd" id="4_input"]
 
 [node name="PlayingRound" type="Node"]
 script = ExtResource("1_spxyj")
@@ -13,6 +14,9 @@ script = ExtResource("2_q1gt0")
 
 [node name="GameInitializer" type="Node" parent="EventCoordinators"]
 script = ExtResource("3_vpgwi")
+
+[node name="StateRouter" type="Node" parent="EventCoordinators"]
+script = ExtResource("3_huphp")
 
 [node name="Logic" type="Node" parent="."]
 

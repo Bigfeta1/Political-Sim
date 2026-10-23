@@ -117,7 +117,6 @@ func create_playing_round():
 	var playing_round = SceneLoader.instantiate(PLAYING_ROUND_LOGIC)
 	logic.add_child(playing_round)
 	logic.register("playing_round", playing_round)
-	playing_round.initialize(logic.get_system("country_manager"))
 
 	state_manager = logic.get_system("state_manager")
 	turn_manager = state_manager.turn_manager
@@ -125,6 +124,8 @@ func create_playing_round():
 
 	playing_round_ui_instance = SceneLoader.instantiate(PLAYING_ROUND_UI)
 	ui.add_child(playing_round_ui_instance)
+
+	playing_round.initialize(logic.get_system("country_manager"), state_manager, playing_round_ui_instance)
 
 	var player_country = logic.get_system("country_manager").get_player_country()
 	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager, player_country)
