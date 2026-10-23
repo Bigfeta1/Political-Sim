@@ -14,8 +14,6 @@ var workers_node
 var country_population_count:
 	get:
 		return population_count_node.population_count
-	set(value):
-		population_count_node.set_population_count(value)
 
 # Life expectancy is calculated from the mortality data, so it can only be read.
 var country_life_expectancy:

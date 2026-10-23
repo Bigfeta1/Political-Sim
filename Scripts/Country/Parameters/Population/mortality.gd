@@ -15,8 +15,11 @@ func initialize(bands, factors):
 func set_mortality(value):
 	mortality = value
 	for band in age_bands.get_children():
-		band.population = value["bands"][band.key]["population"]
-		band.deaths = value["bands"][band.key]["deaths"]
+		var band_data = value["bands"][band.key]
+		band.population = band_data["population"]
+		band.death_rates = {}
+		for cause in band_data["deaths"]:
+			band.death_rates[cause] = band_data["deaths"][cause] / band_data["population"]
 	mortality_changed.emit(value)
 
 func set_risk_prevalence(value):
@@ -28,12 +31,12 @@ func set_risk_prevalence(value):
 
 func death_rate(band) -> float:
 	# Called by LifeExpectancy for Life Table calculation
-	# Each cause's deaths in the band are scaled by every risk factor's multiplier for that cause.
-	
+	# Each cause's death rate in the band is scaled by every risk factor's multiplier for that cause.
+
 	var total := 0.0
-	for cause in band.deaths:
-		var cause_deaths = band.deaths[cause]
+	for cause in band.death_rates:
+		var cause_rate = band.death_rates[cause]
 		for factor in risk_factors.get_children():
-			cause_deaths *= factor.multiplier(cause, band)
-		total += cause_deaths
-	return total / band.population
+			cause_rate *= factor.multiplier(cause, band)
+		total += cause_rate
+	return total

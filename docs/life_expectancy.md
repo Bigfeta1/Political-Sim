@@ -15,7 +15,7 @@ Each job has its own child of `Population` in `country.tscn`. `population.gd` wi
 
 ```
 Population             population.gd: wires its children, merges their save data
-├─ Count               population_count.gd: population_count, population_count_changed
+├─ Count               population_count.gd: population_count = sum of the bands, population_count_changed
 ├─ AgeBands
 │  ├─ Age0To4          age_band.gd: key "0-4" gives start_age 0, width 5
 │  ├─ Age5To14 … Age60To69
@@ -27,23 +27,24 @@ Population             population.gd: wires its children, merges their save data
 └─ Workers             workers.gd: head count per role
 ```
 
-A `[connection]` in `country.tscn` routes `Mortality.mortality_changed` to `LifeExpectancy._on_mortality_changed`, which runs `calibrate()` and then `calculate()`. Each of those calls `life_table()` once.
+Two `[connection]` entries in `country.tscn` route `Mortality.mortality_changed` to `LifeExpectancy._on_mortality_changed`, which runs `calibrate()` and then `calculate()` (each calls `life_table()` once), and to `Count._on_mortality_changed`, which adds up the bands' populations. The bands are the country's only population figure.
 
 | Script | Job |
 | --- | --- |
-| `Scripts/Country/Parameters/population.gd` | Calls `mortality.initialize(age_bands, risk_factors)` and `life_expectancy.initialize(age_bands, mortality)`. |
-| `Scripts/Country/Parameters/Population/mortality.gd` | Holds `mortality` and `risk_prevalence`. `set_mortality()` fills each band's population and deaths, then emits `mortality_changed`. `set_risk_prevalence()` hands each factor its start and current shares. `death_rate(band)` multiplies each cause's deaths by every factor's multiplier and divides by the band's population. |
+| `Scripts/Country/Parameters/population.gd` | Calls `count.initialize(age_bands)`, `mortality.initialize(age_bands, risk_factors)` and `life_expectancy.initialize(age_bands, mortality)`. |
+| `Scripts/Country/Parameters/Population/population_count.gd` | `count_bands()` sums the bands' populations and stores the total with `set_population_count()`, which emits `population_count_changed`. It runs on `mortality_changed` and after loading. Saves each band's population under `population`, keyed by band, and writes them back on load. |
+| `Scripts/Country/Parameters/Population/mortality.gd` | Holds `mortality` and `risk_prevalence`. `set_mortality()` fills each band's population and turns each cause's WHO deaths into a rate (deaths ÷ the band's WHO population), then emits `mortality_changed`. `set_risk_prevalence()` hands each factor its start and current shares. `death_rate(band)` adds up each cause's rate times every factor's multiplier. It never divides by the band's current population. |
 | `Scripts/Country/Parameters/Population/life_expectancy.gd` | Holds `target_life_expectancy` and `life_expectancy`. Asks `Mortality` for each band's death rate. `set_life_expectancy()` emits `life_expectancy_changed`. |
-| `Scripts/Country/Parameters/Population/age_band.gd` | Data only: `key`, plus `start_age` and `width` read from it in `_ready()`, plus the band's population and deaths per WHO cause. |
+| `Scripts/Country/Parameters/Population/age_band.gd` | Data only: `key`, plus `start_age` and `width` read from it in `_ready()`, plus the band's population and its death rate per WHO cause. |
 | `Scripts/Country/Parameters/Population/risk_factor.gd` | Reads its RR file in `_ready()`. `multiplier(cause, band)` returns 1 when it has no prevalence or the band starts below `min_age`. |
 | `Scripts/Data/mortality_files.gd` | `find_by_id(id)` reads `Data/Mortality/mortality_<id>.json`. |
 | `Scripts/Data/risk_factor_files.gd` | `read(key)` reads `Data/RiskFactors/<key>.json`. |
 
 **Setup order.** `country_factory.gd` sets the target from the country JSON first, then the mortality data, which calibrates the 70+ band against it, then the risk prevalence. `Data` (`player_data.gd`) passes `country_target_life_expectancy` through to `LifeExpectancy`, and `country_mortality` and `country_risk_prevalence` through to `Mortality`. `country_life_expectancy` is read-only.
 
-**Age bands are fixed by the data.** Each band reads its population and deaths from the mortality file by its `key` (`value["bands"][band.key]` in `set_mortality`). The WHO files hold only the 7 bands above (`0-4`, `5-14`, `15-29`, `30-49`, `50-59`, `60-69`, `70+`), so these are the only bands the engine can run. A band whose key is not in the file errors on load. Other brackets need mortality data in those brackets.
+**Age bands are fixed by the data.** Each band reads its population and deaths (turned into rates) from the mortality file by its `key` (`value["bands"][band.key]` in `set_mortality`). The WHO files hold only the 7 bands above (`0-4`, `5-14`, `15-29`, `30-49`, `50-59`, `60-69`, `70+`), so these are the only bands the engine can run. A band whose key is not in the file errors on load. Other brackets need mortality data in those brackets.
 
-**Saving.** Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing. `SAVE_VERSION` is 5.
+**Saving.** `Count` saves each band's population (`population`, keyed by band) and restores the bands from it on load. Life expectancy is calculated, so `Mortality` and `LifeExpectancy` save nothing; loading does not recalculate it. `SAVE_VERSION` is 6.
 
 ## `life_expectancy.gd` by symbol
 
@@ -68,7 +69,7 @@ The script carries no comments. What each part is for lives here.
 | --- | --- |
 | `key` | The band's key in the mortality file, e.g. "30-49" or "70+". Start age and width are read from it. |
 | `width` | Years the band covers; 0 for the open-ended last band. |
-| `deaths` | Deaths in this band per WHO cause name, at game start. |
+| `death_rates` | Death rate in this band per WHO cause name: WHO 2023 deaths ÷ WHO 2023 band population, fixed at game start. Changing the band's population does not change it. |
 
 ## `risk_factor.gd` by symbol
 
@@ -78,7 +79,7 @@ The script carries no comments. What each part is for lives here.
 | `min_age` | Bands starting below this age are unaffected. |
 | `relative_risks` | Relative risk of death per exposure level and cause; causes not listed are unaffected. |
 | `start_prevalence`, `prevalence` | Share of people at each exposure level, at game start and now. Empty until the country's prevalence is known. |
-| `multiplier()` | How much this factor scales a cause's deaths in a band, compared with game start. |
+| `multiplier()` | How much this factor scales a cause's death rate in a band, compared with game start. |
 | `mean_risk()` | Average relative risk across the population; the reference level has a relative risk of 1. |
 
 ## The maths
@@ -89,7 +90,7 @@ Life expectancy at birth is the area under the survival curve. The engine comput
 e0 = ∫ S(t) dt,   S(t) = exp(−∫ μ(s) ds)
 ```
 
-**Closed bands (0-4 up to 60-69).** For a band starting at age x, width n, death rate m (all-cause deaths / population):
+**Closed bands (0-4 up to 60-69).** For a band starting at age x, width n, death rate m (the sum of the band's cause rates, each fixed at WHO deaths ÷ WHO population):
 
 ```
 q(x)     = n·m / (1 + n/2 · m)          chance of dying in the band
@@ -108,7 +109,9 @@ e0        = ΣL + l(70) · e70_start · m70_start / m70_now
 
 The inverse scaling would be exact if the death rate were the same at every age past 70. It is not, so the real response is somewhat smaller.
 
-**Risk factors.** Each cause's deaths in a band are multiplied by every factor's multiplier for that cause. For a factor with exposure levels k (shares p, relative risks RR, reference level RR = 1):
+**Mortality is a rate, not a count.** Each cause's rate is set once at game start, `r(x,c) = deaths_WHO(x,c) / population_WHO(x)`, and `m(x) = Σ_c r(x,c) × multipliers`. The band's current population never enters `m(x)`, so population changes do not move life expectancy; only changes to rates (risk factors) do. Death counts, when needed, are `m(x) × population(x)`. Confirmed by OpenEvidence (2026-10-23): holding WHO death counts fixed while the population changes made the rate fall whenever a band grew, which is an artifact.
+
+**Risk factors.** Each cause's rate in a band is multiplied by every factor's multiplier for that cause. For a factor with exposure levels k (shares p, relative risks RR, reference level RR = 1):
 
 ```
 multiplier = Σ p_now(k) · RR(k)  /  Σ p_start(k) · RR(k)
@@ -188,6 +191,8 @@ A Python mirror of the engine reproduces every target exactly and moves life exp
 | Israel | 82.6 | 82.6 |
 | Russia | 72.4 | 72.4 |
 | UK | 80.7 | 80.7 |
+
+**Population independence (Godot headless, America, 2026-10-23):** with deaths stored as counts, doubling the 30-49 population moved e0 from 78.50 to 79.42, and +10% on 70+ moved it to 79.73. After switching to rates, both give 78.50, and the per-country table above and the smoking rows below give the same values as before.
 
 **Calibration per country (Python):**
 

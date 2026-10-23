@@ -7,7 +7,7 @@ var width: int
 
 var population
 
-var deaths: Dictionary
+var death_rates: Dictionary
 
 func _ready() -> void:
 	if key.ends_with("+"):

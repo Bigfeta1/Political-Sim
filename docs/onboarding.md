@@ -168,7 +168,7 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 ├─ Data                  player_data.gd: id, is_player, name, initiative, plus pass-through fields
 └─ Parameters
    ├─ Population         population.gd: wires its children, merges their save data
-   │  ├─ Count           population_count.gd: population_count
+   │  ├─ Count           population_count.gd: population_count, the sum of the age bands
    │  ├─ AgeBands        age_band.gd per band (7 WHO bands)
    │  ├─ RiskFactors     risk_factor.gd per factor (Smoking)
    │  ├─ Mortality       mortality.gd: death rate per band
@@ -187,7 +187,7 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 
 | `Data` field | Goes to |
 | --- | --- |
-| `country_population_count` | `Count.population_count` / `set_population_count()` |
+| `country_population_count` | `Count.population_count` (read only) |
 | `country_life_expectancy` | `LifeExpectancy.life_expectancy` (read only) |
 | `country_target_life_expectancy` | `LifeExpectancy.target_life_expectancy` |
 | `country_mortality` | `Mortality.mortality` / `set_mortality()` |
@@ -211,10 +211,11 @@ Country                  country.gd: holds the nodes below, saves and loads the 
 | `public_image` | `country_public_image` | `PublicImage.public_image` | 0 to 10 | 5 for every country, a placeholder |
 | `life_expectancy` | `country_target_life_expectancy` | `LifeExpectancy.target_life_expectancy` | Years | WHO life expectancy at birth, both sexes, 2023 (`WHOSIS_000001`). The engine calibrates to it; see `docs/life_expectancy.md`. |
 | `risk_prevalence` | `country_risk_prevalence` | `Mortality.risk_prevalence` | Shares per exposure level | Empty `{}` for every country; no source found yet |
-| `population` | `country_population_count` | `Count.population_count` | People | World Bank total population, 2024 (indicator `SP.POP.TOTL`) |
 | `workers` | `country_workers` | `Workers.workers` | People per role | |
 
 The factory also reads `Data/Mortality/mortality_<id>.json` into `country_mortality`, after the target and before the risk prevalence, because setting it calibrates against the target.
+
+**Population has one source.** The country JSON has no population. `Count` adds up the age bands' populations from the WHO mortality file (2023) when `Mortality` emits `mortality_changed`, through a `[connection]` in `country.tscn`, and stores the total with `set_population_count()` so `population_count_changed` reaches the top bar.
 
 Godot's JSON parser reads every number as a float, so these values are floats. The labels format them for display.
 
@@ -267,13 +268,13 @@ The turn order is computed once, during `SetTurnOrder`. It does not change betwe
 
 | Key | Source |
 | --- | --- |
-| `version` | `SAVE_VERSION` (5). Written but not checked on load. |
+| `version` | `SAVE_VERSION` (6). Written but not checked on load. |
 | `round` | `StateManager.get_save_data()`: `current_round` |
 | `phase` | `PhaseManager.get_save_data()`: `current_phase` |
 | `turn` | `TurnManager.get_save_data()`: `turn_order`, `current_turn_index` |
-| `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `population_count` from `Count` and `workers` from `Workers` (merged by `Population`), `money` from `Economy`, `public_image` from `PublicImage` |
+| `countries` | Each country's `country.get_save_data()`: `id` and `is_player` from `Data`, `population` (each age band's population, keyed by band) from `Count` and `workers` from `Workers` (merged by `Population`), `money` from `Economy`, `public_image` from `PublicImage` |
 
-Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, population count and workers are saved because they are meant to change during play; the JSON only holds their base values. Life expectancy is not saved: it is recalculated from the mortality data when the country is created. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
+Country name and initiative are not saved. They come from the country JSON, so editing the JSON still applies to old saves. Money, public image, workers and population are saved because they are meant to change during play; the JSON and the mortality file only hold their base values. Population is saved per age band, not as a total: `Count.load_save_data` writes each band's population back and recounts, so the bands stay the only source. Life expectancy is not saved; it is recalculated from the mortality data when the country is created. Deaths per band are not saved. `Data` carries `id` and `is_player` for this: the factory sets `id`, and `CreatePlayerCountry` sets `is_player`, since `round_config` is gone by the time the round plays.
 
 **Load.** There is no separate load path. The load button puts the parsed save on the `round_config` node and requests `CONFIGURE_ROUND`, and the normal steps build the round to that config. `CreatePlayerCountry` reads the player id from the config unchanged, `CreatePlayers` creates the saved opponents, and `RestoreSavedState` applies round, phase and turn, then each country's saved values. The countries are first created from their JSON and then overwritten from the save. `load_save_data` sets fields directly. `PhaseManager` must not go through `advance_phase`, because `phase_changed` calls `start_turns` and would reset the turn index.
 
@@ -350,10 +351,9 @@ The round setup flow is complete end to end in code, but several parts are place
 - **Nothing listens to `round_changed`.** There is no round label yet.
 - **Save and load are untested.** F5 save, the load entry, the X button and the restore step have been written but not run in the editor.
 - **One save slot.** F5 overwrites `user://saves/save.json`. Multiple slots would need a name per save and a list in the load panel.
-- **Version is not checked.** `version` is written and ignored on load. A save written before the 2026-10-23 rename of `population` to `population_count` errors in `Count.load_save_data`, and `SAVE_VERSION` was not bumped for that rename, so such a save still says version 5.
+- **Version is not checked.** `version` is written and ignored on load. Version 6 (2026-10-23) saves `population` as a dictionary of band populations. A save from version 5 or earlier has no such dictionary and errors in `Count.load_save_data`.
 - **Saved countries must exist.** A save naming a country with no JSON file would fail in the factory. This is accepted for now.
-- **Country values never change.** Money, public image, population count and workers are loaded and saved, and life expectancy is calculated once, but nothing in play changes any of them yet.
-- **Two population figures.** `Count.population_count` comes from the World Bank figure in the country JSON. The age bands' populations come from the WHO mortality file. Nothing connects them.
+- **Country values never change.** Money, public image, workers and population are loaded and saved, and life expectancy and population count are calculated when the country is created, but nothing in play changes any of them yet.
 - **Money measure is open.** `money` is total household wealth (2022). Gross national assets (about $269 trillion for the US) and net national wealth were discussed as alternatives; a comparable source for all six countries has not been found.
 - **Top bar is untested in a run.** The labels, their formatting and whether the font draws `★`, `♥` and `☻` have not been confirmed by running the game.
 - **Stubs.** `GameInitializer` stores the country manager and does nothing; the phases have names and a cycle but no behaviour.
