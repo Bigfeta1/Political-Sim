@@ -7,6 +7,7 @@ const WATER_MATERIAL = preload("res://Assets/Shaders/water_tile_material.tres")
 const TERRAIN_TILES = {
 	MapCell.Terrain.LAND: "res://Scenes/Map/Tiles/land_tile.tscn",
 	MapCell.Terrain.WATER: "res://Scenes/Map/Tiles/water_tile.tscn",
+	MapCell.Terrain.DESERT: "res://Scenes/Map/Tiles/desert_tile.tscn",
 }
 
 const TILE_SIZE = 1.0

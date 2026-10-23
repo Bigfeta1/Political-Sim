@@ -18,7 +18,7 @@ static func build(cells: Dictionary) -> ImageTexture:
 	for coordinate in cells:
 		var pixel = coordinate - origin
 		var distance = coast_distance(distances, coordinate)
-		var land = 1.0 if cells[coordinate].terrain == MapCell.Terrain.LAND else 0.0
+		var land = 0.0 if cells[coordinate].terrain == MapCell.Terrain.WATER else 1.0
 		var current = encode_current(find_current(cells, distances, coordinate))
 		image.set_pixel(pixel.x, pixel.y, Color(distance / float(MAX_COAST_DISTANCE), land, current.x, current.y))
 
@@ -67,7 +67,7 @@ static func find_coast_distances(cells: Dictionary) -> Dictionary:
 	var frontier := []
 
 	for coordinate in cells:
-		if cells[coordinate].terrain == MapCell.Terrain.LAND:
+		if cells[coordinate].terrain != MapCell.Terrain.WATER:
 			distances[coordinate] = 0
 			frontier.append(coordinate)
 

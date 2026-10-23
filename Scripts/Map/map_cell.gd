@@ -3,6 +3,7 @@ extends RefCounted
 enum Terrain {
 	LAND,
 	WATER,
+	DESERT,
 }
 
 var coordinate: Vector2i

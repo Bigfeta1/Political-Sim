@@ -2,12 +2,18 @@ extends Node
 
 const MapCell = preload("res://Scripts/Map/map_cell.gd")
 const MapFiles = preload("res://Scripts/Data/map_files.gd")
+const BiomeGrid = preload("res://Scripts/Map/biome_grid.gd")
 
 const MAP_ID = "earth"
 const LAND_THRESHOLD = 0.5
 const ISLAND_THRESHOLD = 0.25
 const ISLAND_MAX_SQUARES = 200
 const MIN_RESCUE_SQUARES = 3
+const BIOME_THRESHOLD = 0.5
+
+const BIOME_TERRAINS = {
+	"desert": MapCell.Terrain.DESERT,
+}
 
 const EVEN_ROW_NEIGHBOURS = [
 	Vector2i(1, 0),
@@ -43,6 +49,7 @@ func generate(dimensions: Vector2i) -> Dictionary:
 	var cells_of = index_landmasses(counts)
 	rescue_islands(terrain, counts, cells_of, sizes)
 	bridge_landmasses(terrain, counts, cells_of, dimensions)
+	place_biomes(terrain, land_map, dimensions)
 
 	return terrain
 
@@ -241,4 +248,29 @@ func neighbours(offset: Vector2i, dimensions: Vector2i) -> Array:
 			result.append(neighbour)
 
 	return result
+#endregion
+
+#region Biomes
+func place_biomes(terrain: Dictionary, land_map: Dictionary, dimensions: Vector2i) -> void:
+	var grid = BiomeGrid.build(MapFiles.find_biomes_by_id(MAP_ID), int(land_map["width"]), int(land_map["height"]))
+
+	for offset in terrain:
+		if terrain[offset] != MapCell.Terrain.LAND:
+			continue
+
+		var squares = find_squares(land_map, dimensions, offset.x, offset.y)
+		var biomes = count_biomes(grid, squares)
+		var biome = dominant(biomes)
+		if biome != null and biomes[biome] >= BIOME_THRESHOLD * squares.size():
+			terrain[offset] = BIOME_TERRAINS[biome]
+
+func count_biomes(grid: Array, squares: Array[Vector2i]) -> Dictionary:
+	var biomes := {}
+
+	for square in squares:
+		var biome = grid[square.y][square.x]
+		if biome != "" and BIOME_TERRAINS.has(biome):
+			biomes[biome] = biomes.get(biome, 0) + 1
+
+	return biomes
 #endregion
