@@ -7,7 +7,7 @@ extends Node
 @onready var parameters = $Parameters
 
 func _ready() -> void:
-	data.initialize(parameters)
+	data.initialize(population, economy, public_image)
 
 # Every parameter node with save functions is included; nodes without a script are skipped.
 func get_save_data() -> Dictionary:

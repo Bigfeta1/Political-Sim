@@ -18,9 +18,9 @@ Population             population.gd: merges its children's save data
 ├─ Count               population_count.gd: population, population_changed
 ├─ LifeExpectancy      life_expectancy.gd: life table, 70+ calibration, life_expectancy_changed
 │  ├─ AgeBands
-│  │  ├─ Age0To4       age_band.gd: key "0-4", start_age 0, width 5
+│  │  ├─ Age0To4       age_band.gd: key "0-4" gives start_age 0, width 5
 │  │  ├─ Age5To14 … Age60To69
-│  │  └─ Age70Plus     width 0 = the open-ended last band
+│  │  └─ Age70Plus     key "70+" gives width 0 = the open-ended last band
 │  └─ RiskFactors
 │     └─ Smoking       risk_factor.gd: key "smoking"
 └─ Workers             workers.gd: head count per role
@@ -35,6 +35,8 @@ Population             population.gd: merges its children's save data
 | `Scripts/Data/risk_factor_files.gd` | `read(key)` reads `Data/RiskFactors/<key>.json`. |
 
 **Setup order.** `country_factory.gd` sets the target from the country JSON first, then the mortality data, which calibrates the 70+ band against it, then the risk prevalence. `Data` (`player_data.gd`) passes `country_target_life_expectancy`, `country_mortality` and `country_risk_prevalence` through to `LifeExpectancy`. `country_life_expectancy` is read-only.
+
+**Age bands are fixed by the data.** Each band reads its population and deaths from the mortality file by its `key` (`value["bands"][band.key]` in `set_mortality`). The WHO files hold only the 7 bands above (`0-4`, `5-14`, `15-29`, `30-49`, `50-59`, `60-69`, `70+`), so these are the only bands the engine can run. A band whose key is not in the file errors on load. Other brackets need mortality data in those brackets.
 
 **Saving.** Life expectancy is calculated, so `LifeExpectancy` saves nothing. `SAVE_VERSION` is 5.
 

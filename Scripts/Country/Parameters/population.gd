@@ -1,5 +1,16 @@
 extends Node
 
+@onready var count = $Count
+@onready var age_bands = $AgeBands
+@onready var risk_factors = $RiskFactors
+@onready var mortality = $Mortality
+@onready var life_expectancy = $LifeExpectancy
+@onready var workers = $Workers
+
+func _ready() -> void:
+	mortality.initialize(age_bands, risk_factors)
+	life_expectancy.initialize(age_bands, mortality)
+
 # Every child with save functions is included, the same way country.gd handles Parameters.
 func get_save_data() -> Dictionary:
 	var save_data := {}

@@ -68,7 +68,7 @@ layout_mode = 2
 script = ExtResource("6_parameter_label")
 symbol = "☻"
 parameter = "Population/Count"
-value = "population"
+value = "population_count"
 format = 3
 
 [node name="Buttons" type="Control" parent="."]

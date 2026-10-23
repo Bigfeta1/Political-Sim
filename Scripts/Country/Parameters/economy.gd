@@ -2,10 +2,11 @@ extends Node
 
 signal money_changed(new_money)
 
-var money:
-	set(value):
-		money = value
-		money_changed.emit(value)
+var money
+
+func set_money(value):
+	money = value
+	money_changed.emit(value)
 
 func get_save_data() -> Dictionary:
 	return {
@@ -13,4 +14,4 @@ func get_save_data() -> Dictionary:
 	}
 
 func load_save_data(data: Dictionary) -> void:
-	money = data["money"]
+	set_money(data["money"])

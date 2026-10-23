@@ -1,20 +1,21 @@
 extends Node
 
 var id
-var is_player := false
+var is_player = false
 var country_name
 var country_initiative
 
 var population_count_node
+var mortality_node
 var life_expectancy_node
 var workers_node
 
-# Population, life expectancy and workers live on the children of Parameters/Population; these read and write through to them.
-var country_population:
+# Population, mortality, life expectancy and workers live on the children of Parameters/Population; these read and write through to them.
+var country_population_count:
 	get:
-		return population_count_node.population
+		return population_count_node.population_count
 	set(value):
-		population_count_node.population = value
+		population_count_node.set_population_count(value)
 
 # Life expectancy is calculated from the mortality data, so it can only be read.
 var country_life_expectancy:
@@ -29,21 +30,21 @@ var country_target_life_expectancy:
 
 var country_mortality:
 	get:
-		return life_expectancy_node.mortality
+		return mortality_node.mortality
 	set(value):
-		life_expectancy_node.mortality = value
+		mortality_node.set_mortality(value)
 
 var country_risk_prevalence:
 	get:
-		return life_expectancy_node.risk_prevalence
+		return mortality_node.risk_prevalence
 	set(value):
-		life_expectancy_node.risk_prevalence = value
+		mortality_node.set_risk_prevalence(value)
 
 var country_workers:
 	get:
 		return workers_node.workers
 	set(value):
-		workers_node.workers = value
+		workers_node.set_workers(value)
 
 var economy_node
 
@@ -52,7 +53,7 @@ var country_money:
 	get:
 		return economy_node.money
 	set(value):
-		economy_node.money = value
+		economy_node.set_money(value)
 
 var public_image_node
 
@@ -61,12 +62,12 @@ var country_public_image:
 	get:
 		return public_image_node.public_image
 	set(value):
-		public_image_node.public_image = value
+		public_image_node.set_public_image(value)
 
-
-func initialize(parameters):
-	population_count_node = parameters.get_node("Population/Count")
-	life_expectancy_node = parameters.get_node("Population/LifeExpectancy")
-	workers_node = parameters.get_node("Population/Workers")
-	economy_node = parameters.get_node("Economy")
-	public_image_node = parameters.get_node("PublicImage")
+func initialize(population, economy, public_image):
+	population_count_node = population.count
+	mortality_node = population.mortality
+	life_expectancy_node = population.life_expectancy
+	workers_node = population.workers
+	economy_node = economy
+	public_image_node = public_image

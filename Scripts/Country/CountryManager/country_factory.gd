@@ -29,10 +29,11 @@ func configure_country(country, country_name):
 	country_node_data.country_initiative = country_data["initiative"]
 	country_node_data.country_money = country_data["money"]
 	country_node_data.country_public_image = country_data["public_image"]
+	
 	# The target must be set before the mortality data, which calibrates against it.
 	country_node_data.country_target_life_expectancy = country_data["life_expectancy"]
 	country_node_data.country_mortality = MortalityFiles.find_by_id(country_data["id"])
 	country_node_data.country_risk_prevalence = country_data["risk_prevalence"]
-	country_node_data.country_population = country_data["population"]
+	country_node_data.country_population_count = country_data["population"]
 	country_node_data.country_workers = country_data["workers"]
 #endregion
