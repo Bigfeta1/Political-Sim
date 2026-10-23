@@ -5,7 +5,6 @@ extends Node
 @onready var risk_factors = $RiskFactors
 @onready var mortality = $Mortality
 @onready var life_expectancy = $LifeExpectancy
-@onready var workers = $Workers
 
 func _ready() -> void:
 	mortality.initialize(age_bands, risk_factors)

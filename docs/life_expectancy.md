@@ -23,8 +23,7 @@ Population             population.gd: wires its children, merges their save data
 ├─ RiskFactors
 │  └─ Smoking          risk_factor.gd: key "smoking"
 ├─ Mortality           mortality.gd: death rate per band, mortality_changed
-├─ LifeExpectancy      life_expectancy.gd: life table, 70+ calibration, life_expectancy_changed
-└─ Workers             workers.gd: head count per role
+└─ LifeExpectancy      life_expectancy.gd: life table, 70+ calibration, life_expectancy_changed
 ```
 
 A `[connection]` in `country.tscn` routes `Mortality.mortality_changed` to `LifeExpectancy._on_mortality_changed`, which runs `calibrate()` and then `calculate()` (each calls `life_table()` once). Another routes the city's `band_populations_changed` (`Settlements/City/Population`) to `Count._on_band_populations_changed`. The people live in the cities (see Settlements in `docs/onboarding.md`); each band's `population` is their total, filled by `Count`. Life expectancy never reads it.

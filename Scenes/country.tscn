@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://c4esnvpnxt7wi"]
+[gd_scene load_steps=13 format=3 uid="uid://c4esnvpnxt7wi"]
 
 [ext_resource type="Script" uid="uid://cjypsqgufhc26" path="res://Scripts/Country/Countries/country.gd" id="1_4gy0w"]
 [ext_resource type="Script" uid="uid://bwpp71k1hkxel" path="res://Scripts/PlayerManager/player_data.gd" id="2_ftrsc"]
@@ -7,11 +7,10 @@
 [ext_resource type="Script" uid="uid://cbe32r06rh68j" path="res://Scripts/Country/Parameters/public_image.gd" id="5_public_image"]
 [ext_resource type="Script" uid="uid://chp7636fnk1ro" path="res://Scripts/Country/Parameters/Population/population_count.gd" id="6_population_count"]
 [ext_resource type="Script" uid="uid://cilohxnf5r2jq" path="res://Scripts/Country/Parameters/Population/life_expectancy.gd" id="7_life_expectancy"]
-[ext_resource type="Script" uid="uid://dmxjjqniy6qtf" path="res://Scripts/Country/Parameters/Population/workers.gd" id="8_workers"]
 [ext_resource type="Script" uid="uid://dddp3erey0wy2" path="res://Scripts/Country/Parameters/Population/age_band.gd" id="9_age_band"]
 [ext_resource type="Script" uid="uid://cflyo6ifblheb" path="res://Scripts/Country/Parameters/Population/risk_factor.gd" id="10_risk_factor"]
 [ext_resource type="Script" uid="uid://da3qu13r0rb7p" path="res://Scripts/Country/Parameters/Population/mortality.gd" id="11_mortality"]
-[ext_resource type="Script" path="res://Scripts/Country/Settlements/settlements.gd" id="12_settlements"]
+[ext_resource type="Script" uid="uid://dqwbrgxutgo4i" path="res://Scripts/Country/Settlements/settlements.gd" id="12_settlements"]
 [ext_resource type="PackedScene" path="res://Scenes/city.tscn" id="13_city"]
 
 [node name="Country" type="Node"]
@@ -21,8 +20,6 @@ script = ExtResource("1_4gy0w")
 script = ExtResource("2_ftrsc")
 
 [node name="Parameters" type="Node" parent="."]
-
-[node name="Army" type="Node" parent="Parameters"]
 
 [node name="Population" type="Node" parent="Parameters"]
 script = ExtResource("3_population")
@@ -72,18 +69,11 @@ script = ExtResource("11_mortality")
 [node name="LifeExpectancy" type="Node" parent="Parameters/Population"]
 script = ExtResource("7_life_expectancy")
 
-[node name="Workers" type="Node" parent="Parameters/Population"]
-script = ExtResource("8_workers")
-
 [node name="Economy" type="Node" parent="Parameters"]
 script = ExtResource("4_economy")
 
 [node name="PublicImage" type="Node" parent="Parameters"]
 script = ExtResource("5_public_image")
-
-[node name="Production" type="Node" parent="Parameters"]
-
-[node name="Legal" type="Node" parent="Parameters"]
 
 [node name="Settlements" type="Node" parent="."]
 script = ExtResource("12_settlements")

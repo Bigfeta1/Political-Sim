@@ -36,5 +36,5 @@ func configure_country(country, country_name):
 	country_node_data.country_mortality = mortality
 	country.settlements.settle(mortality)
 	country_node_data.country_risk_prevalence = country_data["risk_prevalence"]
-	country_node_data.country_workers = country_data["workers"]
+	country.settlements.settle_workers(country_data["workers"])
 #endregion

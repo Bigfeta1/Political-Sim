@@ -23,7 +23,9 @@ func build(cells: Dictionary, hex_tile_grid: Node3D) -> void:
 	configure_desert(cells)
 
 	for cell in cells.values():
-		hex_tile_grid.add_child(create_tile(cell, centre))
+		var tile = create_tile(cell, centre)
+		hex_tile_grid.add_child(tile)
+		tile.initialize(cell)
 
 func configure_water(cells: Dictionary) -> void:
 	WATER_MATERIAL.set_shader_parameter("map_data", WaterDataTexture.build(cells))

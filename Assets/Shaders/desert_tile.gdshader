@@ -52,6 +52,8 @@ uniform float draa_frequency = 0.3;
 uniform float draa_width = 0.65;
 uniform float draa_meander = 1.2;
 uniform float draa_segment_scale = 0.15;
+uniform float draa_wander = 0.35;
+uniform float draa_wander_scale = 0.1;
 uniform float superposed_share = 0.25;
 uniform float superposed_turn = 0.35;
 uniform float superposed_meander = 0.25;
@@ -145,14 +147,29 @@ float draa_shape(vec2 point, vec2 wind, out float flank) {
 	vec2 wind_space = to_wind_space(point, wind);
 	float bend = (fbm(vec2(wind_space.y * 0.12, wind_space.x * 0.05)) - 0.5) * 2.0 * draa_meander;
 	float along = (wind_space.x + bend) * draa_frequency;
-	float ridge_index = floor(along);
-	float ridge = clamp(fract(along) / draa_width, 0.0, 1.0);
+	float base_index = floor(along);
+	float best = 0.0;
+	flank = 0.0;
 
-	float segment = smoothstep(0.35, 0.6, value_noise(vec2(wind_space.y * draa_segment_scale, ridge_index * 7.3)));
-	float height = mix(0.6, 1.0, value_noise(vec2(wind_space.y * draa_segment_scale * 0.5, ridge_index * 7.3 + 50.0)));
+	for (int offset = -1; offset <= 1; offset++) {
+		float ridge_index = base_index + float(offset);
+		float wander = (value_noise(vec2(wind_space.y * draa_wander_scale, ridge_index * 7.3 + 100.0)) - 0.5) * 2.0 * draa_wander;
+		float local = along - ridge_index - wander;
+		if (local < 0.0 || local > draa_width) {
+			continue;
+		}
+		float ridge = local / draa_width;
 
-	flank = smoothstep(0.05, 0.2, ridge) * (1.0 - smoothstep(windward_share - 0.2, windward_share - 0.05, ridge)) * segment;
-	return draa_profile(ridge) * segment * height;
+		float segment = smoothstep(0.35, 0.6, value_noise(vec2(wind_space.y * draa_segment_scale, ridge_index * 7.3)));
+		float height = mix(0.6, 1.0, value_noise(vec2(wind_space.y * draa_segment_scale * 0.5, ridge_index * 7.3 + 50.0)));
+		float shape = draa_profile(ridge) * segment * height;
+
+		if (shape > best) {
+			best = shape;
+			flank = smoothstep(0.05, 0.2, ridge) * (1.0 - smoothstep(windward_share - 0.2, windward_share - 0.05, ridge)) * segment;
+		}
+	}
+	return best;
 }
 
 float erg_shape(vec2 point, vec2 wind, float frequency) {

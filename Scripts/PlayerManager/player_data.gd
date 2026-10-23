@@ -8,9 +8,8 @@ var country_initiative
 var population_count_node
 var mortality_node
 var life_expectancy_node
-var workers_node
 
-# Population, mortality, life expectancy and workers live on the children of Parameters/Population; these read and write through to them.
+# Population, mortality and life expectancy live on the children of Parameters/Population; these read and write through to them.
 var country_population_count:
 	get:
 		return population_count_node.population_count
@@ -38,12 +37,6 @@ var country_risk_prevalence:
 	set(value):
 		mortality_node.set_risk_prevalence(value)
 
-var country_workers:
-	get:
-		return workers_node.workers
-	set(value):
-		workers_node.set_workers(value)
-
 var economy_node
 
 # Money lives on Parameters/Economy; this reads and writes through to it.
@@ -66,6 +59,5 @@ func initialize(population, economy, public_image):
 	population_count_node = population.count
 	mortality_node = population.mortality
 	life_expectancy_node = population.life_expectancy
-	workers_node = population.workers
 	economy_node = economy
 	public_image_node = public_image
